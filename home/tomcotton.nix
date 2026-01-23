@@ -669,7 +669,7 @@ in {
       ffmpeg
       rsync
       rhash
-      restic
+      # restic  # Temporarily disabled - rclone build failing on x86_64-darwin
       lf
       vimv
       subversion
