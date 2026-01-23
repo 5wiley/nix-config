@@ -82,7 +82,10 @@ in {
   imports = [
     "${nixVsCodeServer}/modules/vscode-server/home.nix"
     ./modules/atuin.nix
+    ./tomcotton/modules/tmux-config.nix
   ];
+
+  programs.tmux-plugins.enable = true;
 
   programs.atuin-config = {
     # Create this in agenix
@@ -187,100 +190,6 @@ in {
     settings.show_program_path = true;
   };
 
-  programs.tmux = {
-    enable = true;
-    keyMode = "vi"; # Seems fine? May mess with keybindings
-    clock24 = true;
-    mouse = true;
-    prefix = "C-b";
-    historyLimit = 20000;
-    baseIndex = 1;
-    aggressiveResize = true;
-    # escapeTime = 0;
-    terminal = "screen-256color";
-    plugins = with pkgs.tmuxPlugins; [
-      gruvbox
-      tmux-colors-solarized
-
-      # Default: <prefix> + u - show and open urls
-      fzf-tmux-url
-
-      # Run the latest tmux-fzf
-      tmux-fzf-head
-
-      # Default <prefix> + F - shows hints to copy text
-      fingers
-      {
-        plugin = tmux-window-name;
-      }
-    ];
-    extraConfig = ''
-        if-shell "uname | grep -q Darwin" {
-        set-option -g default-command "reattach-to-user-namespace -l zsh"
-      }
-
-      new-session -s main
-      # Vim style pane selection
-      bind h select-pane -L
-      bind j select-pane -D
-      bind k select-pane -U
-      bind l select-pane -R
-
-      # Need to decide if these are the commands I want to use
-      bind "C-h" select-pane -L
-      bind "C-j" select-pane -D
-      bind "C-k" select-pane -U
-      bind "C-l" select-pane -R
-
-
-      bind-key "C-f" run-shell -b "${tmux-fzf-head}/share/tmux-plugins/tmux-fzf/scripts/session.sh switch"
-
-      # set-option -g status-position top
-      set -g renumber-windows on
-      set -g set-clipboard on
-
-      set-option -g status-left "#[bg=colour241,fg=colour248] #h #[bg=colour237,fg=colour241,nobold,noitalics,nounderscore]"
-      set-option -g status-right "#[bg=colour237,fg=colour239 nobold, nounderscore, noitalics]#[bg=colour239,fg=colour246] %Y-%m-%d  %H:%M #[bg=colour239,fg=colour248,nobold,noitalics,nounderscore]#[bg=colour248,fg=colour237] #S "
-
-
-      # https://github.com/samoshkin/tmux-config/blob/master/tmux/tmux.conf
-      set -g buffer-limit 20
-      set -g display-time 1500
-      set -g remain-on-exit off
-      set -g repeat-time 300
-      # setw -g allow-rename off
-      # setw -g automatic-rename off
-
-      # Turn off the prefix key when nesting tmux sessions, led to this
-      # https://gist.github.com/samoshkin/05e65f7f1c9b55d3fc7690b59d678734?permalink_comment_id=4616322#gistcomment-4616322
-      # Whcih led to the tmux-nested plugin
-
-      # keybind to disable outer-most active tmux
-      set -g @nested_down_keybind 'M-o'
-      # keybind to enable inner-most inactive tmux
-      set -g @nested_up_keybind 'M-O'
-      # keybind to recursively enable all tmux instances
-      set -g @nested_up_recursive_keybind 'M-U'
-      # status style of inactive tmux
-      set -g @nested_inactive_status_style '#[fg=black,bg=red] #h #[bg=colour237,fg=colour241,nobold,noitalics,nounderscore]'
-      set -g @nested_inactive_status_style_target 'status-left'
-
-      # The above setting need to be set before running the nested.tmux script
-      run-shell ${tmux-nested}/share/tmux-plugins/tmux-nested/nested.tmux
-
-      # tmux-fzf stuff
-
-      # git-popup: (<prefix> + ctrl-g)
-      bind-key C-g display-popup -E -d "#{pane_current_path}" -xC -yC -w 80% -h 75% "lazygit"
-      # k9s popup: (<prefix> + ctrl-k)
-      bind-key C-k display-popup -E -d "#{pane_current_path}" -xC -yC -w 80% -h 75% "k9s"
-      # jq as a popup, from the clipboard
-      bind-key C-j display-popup -E -d "#{pane_current_path}" -xC -yC -w 80% -h 75% "pbpaste | jq -C '.' | less -R"
-      # btop as a popup
-      bind-key C-b display-popup -E -d "#{pane_current_path}" -xC -yC -w 80% -h 75% "btop"
-    '';
-  };
-
   services.vscode-server.enable = true;
   services.vscode-server.installPath = "$HOME/.vscode-server";
 
@@ -354,7 +263,7 @@ in {
         };
         "files.trimFinalNewlines" = true;
         "files.trimTrailingWhitespace" = true;
-        "editor.lineNumbers" = "relative";
+        # "editor.lineNumbers" = "relative";
         "[latex]" = {
           "editor.wordWrap" = "on";
         };
@@ -369,10 +278,134 @@ in {
           "*.tidal" = "haskell";
         };
         "tidalcycles.bootTidalPath" = "/Users/tomcotton/tidal-cycles/BootFiles/BootTidal.hs";
-        "workbench.colorTheme" = "Gruvbox Material Dark";
-        "gruvboxMaterial.darkContrast" = "medium";
-        "gruvboxMaterial.highContrast" = true;
+        "workbench.colorTheme" = "Default Dark Modern";
         "makefile.configureOnOpen" = true;
+
+        # Custom Gruvbox Material theme matching Ghostty
+        "workbench.colorCustomizations" = {
+          "[Default Dark Modern]" = {
+            "editor.background" = "#282828";
+            "editor.foreground" = "#d4be98";
+            "editorCursor.foreground" = "#d4be98";
+            "editor.selectionBackground" = "#504945";
+            "editor.selectionForeground" = "#d4be98";
+            "editor.lineHighlightBackground" = "#32302f";
+            "editorLineNumber.foreground" = "#7c6f64";
+            "editorLineNumber.activeForeground" = "#d4be98";
+            "sideBar.background" = "#282828";
+            "sideBar.foreground" = "#d4be98";
+            "sideBarSectionHeader.background" = "#32302f";
+            "activityBar.background" = "#282828";
+            "activityBar.foreground" = "#d4be98";
+            "statusBar.background" = "#32302f";
+            "statusBar.foreground" = "#d4be98";
+            "statusBar.noFolderBackground" = "#32302f";
+            "titleBar.activeBackground" = "#282828";
+            "titleBar.activeForeground" = "#d4be98";
+            "titleBar.inactiveBackground" = "#282828";
+            "titleBar.inactiveForeground" = "#7c6f64";
+            "terminal.background" = "#282828";
+            "terminal.foreground" = "#d4be98";
+            "terminal.ansiBlack" = "#282828";
+            "terminal.ansiRed" = "#ea6962";
+            "terminal.ansiGreen" = "#a9b665";
+            "terminal.ansiYellow" = "#d8a657";
+            "terminal.ansiBlue" = "#7daea3";
+            "terminal.ansiMagenta" = "#d3869b";
+            "terminal.ansiCyan" = "#89b482";
+            "terminal.ansiWhite" = "#d4be98";
+            "terminal.ansiBrightBlack" = "#7c6f64";
+            "terminal.ansiBrightRed" = "#ea6962";
+            "terminal.ansiBrightGreen" = "#a9b665";
+            "terminal.ansiBrightYellow" = "#d8a657";
+            "terminal.ansiBrightBlue" = "#7daea3";
+            "terminal.ansiBrightMagenta" = "#d3869b";
+            "terminal.ansiBrightCyan" = "#89b482";
+            "terminal.ansiBrightWhite" = "#ddc7a1";
+            "tab.activeBackground" = "#282828";
+            "tab.inactiveBackground" = "#32302f";
+            "tab.activeForeground" = "#d4be98";
+            "tab.inactiveForeground" = "#7c6f64";
+            "panel.background" = "#282828";
+            "panel.border" = "#504945";
+            "input.background" = "#32302f";
+            "input.foreground" = "#d4be98";
+            "input.border" = "#504945";
+            "dropdown.background" = "#32302f";
+            "dropdown.foreground" = "#d4be98";
+            "list.activeSelectionBackground" = "#504945";
+            "list.activeSelectionForeground" = "#d4be98";
+            "list.hoverBackground" = "#32302f";
+            "list.inactiveSelectionBackground" = "#32302f";
+          };
+        };
+        "editor.tokenColorCustomizations" = {
+          "[Default Dark Modern]" = {
+            "textMateRules" = [
+              {
+                "scope" = ["comment" "punctuation.definition.comment"];
+                "settings" = {
+                  "foreground" = "#7c6f64";
+                  "fontStyle" = "italic";
+                };
+              }
+              {
+                "scope" = ["string" "constant.other.symbol"];
+                "settings" = {"foreground" = "#a9b665";};
+              }
+              {
+                "scope" = ["constant.numeric" "constant.language" "constant.character"];
+                "settings" = {"foreground" = "#d3869b";};
+              }
+              {
+                "scope" = ["keyword" "storage.type" "storage.modifier"];
+                "settings" = {"foreground" = "#ea6962";};
+              }
+              {
+                "scope" = ["entity.name.function" "support.function"];
+                "settings" = {"foreground" = "#a9b665";};
+              }
+              {
+                "scope" = ["entity.name.class" "entity.name.type" "support.class"];
+                "settings" = {"foreground" = "#d8a657";};
+              }
+              {
+                "scope" = ["variable" "support.variable"];
+                "settings" = {"foreground" = "#7daea3";};
+              }
+              {
+                "scope" = ["entity.name.tag" "markup.heading"];
+                "settings" = {"foreground" = "#7daea3";};
+              }
+              {
+                "scope" = ["entity.other.attribute-name"];
+                "settings" = {"foreground" = "#d8a657";};
+              }
+              {
+                "scope" = ["support.type.property-name"];
+                "settings" = {"foreground" = "#7daea3";};
+              }
+              {
+                "scope" = ["markup.bold"];
+                "settings" = {
+                  "foreground" = "#ea6962";
+                  "fontStyle" = "bold";
+                };
+              }
+              {
+                "scope" = ["markup.italic"];
+                "settings" = {
+                  "foreground" = "#d3869b";
+                  "fontStyle" = "italic";
+                };
+              }
+              {
+                "scope" = ["markup.inline.raw"];
+                "settings" = {"foreground" = "#89b482";};
+              }
+            ];
+          };
+        };
         # "gruvboxMaterial.darkPalette" = "original";
         # "gruvboxMaterial.darkWorkbench" = "original";
       };
@@ -409,6 +442,9 @@ in {
     };
     configFile."ghostty/config" = {
       source = ./tomcotton/config/.config/ghostty/config;
+    };
+    configFile."sesh/sesh.toml" = {
+      source = ./tomcotton/modules/sesh.toml;
     };
   };
 
@@ -495,7 +531,7 @@ in {
         }
 
         # For some reason this was aliased to vi, seems regresive
-        unalias nvim
+        # unalias nvim
 
         # Set these in your shell (e.g., ~/.bashrc, ~/.zshrc)
         export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
@@ -514,7 +550,7 @@ in {
         "kubectl"
         "kube-ps1"
         "ssh-agent"
-        "tmux"
+        # "tmux"  # Removed - managed by home-manager programs.tmux instead
         "z"
       ];
     };
@@ -559,6 +595,24 @@ in {
 
       export PATH=$PATH:/Library/TeX/texbin
 
+      function reload-hm () {
+        echo "🔄 Reloading home-manager environment..."
+
+        # Reload tmux config first (before exec replaces this shell)
+        if [[ -n "$TMUX" ]]; then
+          local tmux_conf="$HOME/.config/tmux/tmux.conf"
+          if [[ -f "$tmux_conf" ]]; then
+            tmux source-file "$tmux_conf"
+            echo "  ✓ Reloaded tmux.conf"
+          fi
+        fi
+
+        # Unset the guard so hm-session-vars.sh runs in the new shell
+        unset __HM_SESS_VARS_SOURCED
+
+        echo "  ✓ Starting fresh shell..."
+        exec zsh
+      }
 
     '';
 
@@ -605,69 +659,75 @@ in {
     };
   };
 
-  home.packages = with pkgs; [
-    # unstablePkgs.ghostty
-    (pkgs.python311.withPackages (ppkgs: [
-      ppkgs.numpy
-      ppkgs.libtmux
-    ]))
-    ffmpeg
-    rsync
-    rhash
-    restic
-    lf
-    vimv
-    subversion
-    devenv
-    arduino-cli
-    # claude-code
-    # python3Packages.libtmux
-    # kubernetes-helm
-    # kubectx
-    # kubectl
-    #   ## unstable
-    #   unstablePkgs.yt-dlp
-    #   unstablePkgs.terraform
+  home.packages = with pkgs;
+    [
+      # unstablePkgs.ghostty
+      (pkgs.python311.withPackages (ppkgs: [
+        ppkgs.numpy
+        ppkgs.libtmux
+      ]))
+      ffmpeg
+      rsync
+      rhash
+      restic
+      lf
+      vimv
+      subversion
+      devenv
+      arduino-cli
+      sesh
+      # claude-code
+      # python3Packages.libtmux
+      # kubernetes-helm
+      # kubectx
+      # kubectl
+      #   ## unstable
+      #   unstablePkgs.yt-dlp
+      #   unstablePkgs.terraform
 
-    #   ## stable
-    #   ansible
-    #   asciinema
-    #   bitwarden-cli
-    #   coreutils
-    #   # direnv # programs.direnv
-    #   #docker
-    #   drill
-    #   du-dust
-    #   dua
-    #   duf
-    #   esptool
-    #   ffmpeg
-    #   fd
-    #   #fzf # programs.fzf
-    #   #git # programs.git
-    gh
-    #   go
-    #   gnused
-    #   #htop # programs.htop
-    #   hub
-    #   hugo
-    #   ipmitool
-    #   jetbrains-mono # font
-    #   just
-    #   jq
-    #   mas # mac app store cli
-    #   mc
-    #   mosh
-    #   neofetch
-    #    nmap
-    # (python311.withPackages(ps: with ps; [ libtmux ]))
-    #   ripgrep
-    #   skopeo
-    #   smartmontools
-    #   tree
-    #   unzip
-    #   watch
-    #   wget
-    #   wireguard-tools
-  ];
+      #   ## stable
+      #   ansible
+      #   asciinema
+      #   bitwarden-cli
+      #   coreutils
+      #   # direnv # programs.direnv
+      #   #docker
+      #   drill
+      #   du-dust
+      #   dua
+      #   duf
+      #   esptool
+      #   ffmpeg
+      #   fd
+      #   #fzf # programs.fzf
+      #   #git # programs.git
+      gh
+      #   go
+      #   gnused
+      #   #htop # programs.htop
+      #   hub
+      #   hugo
+      #   ipmitool
+      #   jetbrains-mono # font
+      #   just
+      #   jq
+      #   mas # mac app store cli
+      #   mc
+      #   mosh
+      #   neofetch
+      #    nmap
+      # (python311.withPackages(ps: with ps; [ libtmux ]))
+      #   ripgrep
+      #   skopeo
+      #   smartmontools
+      #   tree
+      #   unzip
+      #   watch
+      #   wget
+      #   wireguard-tools
+    ]
+    ++ lib.optionals stdenv.isDarwin [
+      # macOS-only: tmux clipboard integration
+      reattach-to-user-namespace
+    ];
 }

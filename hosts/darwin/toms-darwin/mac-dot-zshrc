@@ -37,4 +37,4 @@ alias kcgpo='kubectl get pod'
 # This is a test comment
 
 #/Users/alex/go/bin/figurine -f "Doom.flf" magrathea
-"$HOME/.ghcup/env" # required by tidal-cycles
+source "$HOME/.ghcup/env" # required by tidal-cycles
