@@ -70,6 +70,7 @@ in {
     nix.settings.system-features = [
       "nixos-test"
       "apple-virt"
+      "big-parallel"
     ];
     nix.settings.trusted-users = [
       "root"
