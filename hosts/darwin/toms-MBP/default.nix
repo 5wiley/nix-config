@@ -34,12 +34,6 @@ in {
     })
   ];
 
-  nixpkgs.config.packageOverrides = pkgs: {
-    firefox-unwrapped = pkgs.firefox-unwrapped.override {
-      enableParallelBuilding = false;
-    };
-  };
-
   # stdenv.mkDerivation.NIX_LDFLAGS = "-headerpad_max_install_names";
 
   homebrew = {
