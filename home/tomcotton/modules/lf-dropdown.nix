@@ -36,15 +36,16 @@ in {
         #!/usr/bin/env bash
         # Toggle lf floating window in tmux
 
-        # Store the current pane ID as the origin pane for LF to track
+        # Store the current pane ID and directory
         ORIGIN_PANE_ID=$(tmux display-message -p '#{pane_id}')
+        CURRENT_DIR=$(tmux display-message -p '#{pane_current_path}')
 
         # Open lf in a centered floating popup
         # -E closes popup when lf exits
         # -w and -h set width/height
-        # -d sets the starting directory
+        # -d sets the starting directory to current pane's directory
         tmux popup -E -w ${cfg.width} -h ${cfg.height} \
-          -d '#{?pane_path,#{pane_path},#{pane_current_path}}' \
+          -d "$CURRENT_DIR" \
           "LF_ORIGIN_PANE=$ORIGIN_PANE_ID lf"
       '';
     };

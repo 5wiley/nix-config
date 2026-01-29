@@ -184,6 +184,9 @@ in {
           set -g @fzf-url-open '${localPackages.xdg-open-remote}/bin/xdg-open-remote'
         ''}
 
+        # Restore default session chooser (prefix-s)
+        bind s choose-tree -Zs
+
         # Vim style pane selection
         bind h select-pane -L
         bind j select-pane -D
