@@ -273,13 +273,13 @@ local plugin_specs = {
   { "tpope/vim-repeat", event = "VeryLazy" },
 
   -- Git command inside vim
-  {
-    "tpope/vim-fugitive",
-    event = "User InGitRepo",
-    config = function()
-      require("config.fugitive")
-    end,
-  },
+  -- {
+  --   "tpope/vim-fugitive",
+  --   event = "User InGitRepo",
+  --   config = function()
+  --     require("config.fugitive")
+  --   end,
+  -- },
 
   -- {
   --   "mhinz/vim-signify",

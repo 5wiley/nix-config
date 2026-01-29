@@ -25,6 +25,16 @@ set ifs "\n"
 # use enter for shell commands
 map <enter> shell-pipe
 
+# tmux popup shell
+cmd shell-popup ${{
+    if [ -z "$TMUX" ]; then
+        lf -remote "send $id echoerr 'Not running inside tmux'"
+    else
+        tmux popup -d '#{pane_current_path}' -xC -yC -w90% -h80% -E
+    fi
+}}
+map <c-t> shell-popup
+
 # show the result of execution of previous commands
 map ` !true
 
@@ -147,6 +157,17 @@ cmd on-load &{{
 }}
 
 cmd on-cd &{{
+    # Send OSC 7 to CD in tmux origin pane when using C-Space e command
+    lf -remote "send $id tty-write \"\033]7;file://$PWD\033\\\""
+
+    # If LF_ORIGIN_PANE is set, update the origin pane's directory
+    if [ -n "$LF_ORIGIN_PANE" ] && [ -n "$TMUX" ]; then
+        # Escape single quotes and backslashes in the path for sending to tmux
+        escaped_dir=$(printf '%s' "$PWD" | sed "s/'/'\\\\''/g")
+        # Send cd command to the origin pane
+        tmux send-keys -t "$LF_ORIGIN_PANE" "cd '$escaped_dir'" Enter
+    fi
+
     # display repository status in your prompt
     if [ -d .git ] || [ -f .git ]; then
         branch="$(git branch --show-current 2>/dev/null)" || true
@@ -164,6 +185,39 @@ cmd on-cd &{{
     fi
     lf -remote "send $id set promptfmt \"$fmt\""
 }}
+
+# unset pane_path when quitting
+cmd on-quit &{{
+    lf -remote "send $id tty-write \"\033]7;\033\\\""
+}}
+
+# Custom quit command that pastes selected files to origin pane or clipboard
+cmd quit-and-paste &{{
+    # Get selected files (or current file if none selected)
+    # $fx contains full paths, one per line
+    if [ -n "$fx" ]; then
+        # Convert newline-separated paths to space-separated, quoted paths
+        paths=""
+        while IFS= read -r file; do
+            # Escape single quotes in path
+            escaped=$(printf '%s' "$file" | sed "s/'/'\\\\''/g")
+            paths="$paths'$escaped' "
+        done << EOF
+$fx
+EOF
+    if [ "$(uname -s)" = Darwin ]; then
+            printf '%s' "$paths" | pbcopy
+        else
+            printf '%s' "$paths" | xclip -i -selection clipboard
+        fi
+    fi
+    # Quit lf
+    lf -remote "send $id quit"
+}}
+
+# Map 'q' to quit-and-paste instead of default quit
+map q quit-and-paste
+map Q quit
 
 # define a custom 'rename' command without prompt for overwrite
 # cmd rename %[ -e $1 ] && printf "file exists" || mv $f $1

@@ -83,9 +83,11 @@ in {
     "${nixVsCodeServer}/modules/vscode-server/home.nix"
     ./modules/atuin.nix
     ./tomcotton/modules/tmux-config.nix
+    ./tomcotton/modules/lf-dropdown.nix
   ];
 
   programs.tmux-plugins.enable = true;
+  programs.lf-dropdown.enable = true;
 
   programs.atuin-config = {
     # Create this in agenix
@@ -522,7 +524,7 @@ in {
         # You may also like to assign a key (Ctrl-O) to this command:
         #
         #     bind '"\C-o":"lfcd\C-m"'  # bash
-        bindkey -s '^o' 'lfcd\n'  # zsh
+        # bindkey -s '^o' 'lfcd\n'  # zsh
         #
 
         lfcd () {
