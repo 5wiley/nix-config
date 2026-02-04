@@ -186,6 +186,8 @@ in {
 
         # Restore default session chooser (prefix-s)
         bind s choose-tree -Zs
+        # Create new session (prefix-S)
+        bind S new-session
 
         # Vim style pane selection
         bind h select-pane -L
