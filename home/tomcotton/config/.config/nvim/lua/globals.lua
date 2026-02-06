@@ -10,15 +10,18 @@ vim.cmd('filetype indent on')
 -- Enable syntax highlighting
 vim.cmd('syntax on')
 
+vim.opt.spelllang = 'en_us'
+vim.opt.spell = true
+
 -- Set line numbers with relative numbering
 vim.opt.number = true
-vim.opt.relativenumber = true
+-- vim.opt.relativenumber = true
 
 -- Highlight cursor line underneath the cursor horizontally.
 vim.opt.cursorline = true
 
 -- Highlight cursor line underneath the cursor vertically.
-vim.opt.cursorcolumn = true
+-- vim.opt.cursorcolumn = true
 
 -- Set shift width to 4 spaces.
 -- vim.opt.shiftwidth = 4

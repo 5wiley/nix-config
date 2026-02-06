@@ -79,18 +79,18 @@ local plugin_specs = {
   --     "nvim-telescope/telescope-symbols.nvim",
   --   },
   -- },
-  {
-    'romgrk/barbar.nvim',
-    dependencies = {
-      'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
-      'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
-    },
-    init = function() vim.g.barbar_auto_setup = false end,
-    opts = {
-      require("config.barbar")
-    },
-    version = '^1.0.0', -- optional: only update when a new 1.x version is released
-  },
+  -- {
+  --   'romgrk/barbar.nvim',
+  --   dependencies = {
+  --     'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
+  --     'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
+  --   },
+  --   init = function() vim.g.barbar_auto_setup = false end,
+  --   opts = {
+  --     require("config.barbar")
+  --   },
+  --   version = '^1.0.0', -- optional: only update when a new 1.x version is released
+  -- },
   {
     "ibhagwan/fzf-lua",
     config = function()
@@ -98,20 +98,20 @@ local plugin_specs = {
     end,
     event = "VeryLazy",
   },
-  {
-    "lmburns/lf.nvim",
-    cmd = "Lf",
-    dependencies = { "nvim-lua/plenary.nvim", "akinsho/toggleterm.nvim" },
-    opts = {
-      winblend = 0,
-      highlights = { NormalFloat = { guibg = "NONE" } },
-      border = "single",
-      escape_quit = false,
-    },
-    keys = {
-      { "<leader>fl", "<cmd>Lf<cr>", desc = "NeoTree" },
-    },
-  },
+  -- {
+  --   "lmburns/lf.nvim",
+  --   cmd = "Lf",
+  --   dependencies = { "nvim-lua/plenary.nvim", "akinsho/toggleterm.nvim" },
+  --   opts = {
+  --     winblend = 0,
+  --     highlights = { NormalFloat = { guibg = "NONE" } },
+  --     border = "single",
+  --     escape_quit = false,
+  --   },
+  --   keys = {
+  --     { "<leader>fl", "<cmd>Lf<cr>", desc = "NeoTree" },
+  --   },
+  -- },
 
   -- {
   --   'akinsho/toggleterm.nvim',
@@ -188,14 +188,14 @@ local plugin_specs = {
     lazy = true,
   },
 
-  {
-    "nvim-lualine/lualine.nvim",
-    event = "BufRead",
-    cond = firenvim_not_active,
-    config = function()
-      require("config.lualine")
-    end,
-  },
+  -- {
+  --   "nvim-lualine/lualine.nvim",
+  --   event = "BufRead",
+  --   cond = firenvim_not_active,
+  --   config = function()
+  --     require("config.lualine")
+  --   end,
+  -- },
 
   -- {
   --   "akinsho/bufferline.nvim",
@@ -246,13 +246,13 @@ local plugin_specs = {
   -- },
 
   -- Comment plugin
-  {
-    "tpope/vim-commentary",
-    keys = {
-      { "gc", mode = "n" },
-      { "gc", mode = "v" },
-    },
-  },
+  -- {
+  --   "tpope/vim-commentary",
+  --   keys = {
+  --     { "gc", mode = "n" },
+  --     { "gc", mode = "v" },
+  --   },
+  -- },
 
   -- Multiple cursor plugin like Sublime Text?
   -- 'mg979/vim-visual-multi'
@@ -270,7 +270,7 @@ local plugin_specs = {
   },
 
   -- Repeat vim motions
-  { "tpope/vim-repeat", event = "VeryLazy" },
+  -- { "tpope/vim-repeat", event = "VeryLazy" },
 
   -- Git command inside vim
   -- {
@@ -289,20 +289,20 @@ local plugin_specs = {
   -- },
 
   -- Better git log display
-  { "rbong/vim-flog", cmd = { "Flog" } },
-  {
-    "akinsho/git-conflict.nvim",
-    version = "*",
-    event = "VeryLazy",
-    config = function()
-      require("config.git-conflict")
-    end,
-  },
+  -- { "rbong/vim-flog", cmd = { "Flog" } },
+  -- {
+  --   "akinsho/git-conflict.nvim",
+  --   version = "*",
+  --   event = "VeryLazy",
+  --   config = function()
+  --     require("config.git-conflict")
+  --   end,
+  -- },
 
-  {
-    "sindrets/diffview.nvim",
-    cmd = { "DiffviewOpen" },
-  },
+  -- {
+  --   "sindrets/diffview.nvim",
+  --   cmd = { "DiffviewOpen" },
+  -- },
 
   {
     "rhysd/vim-grammarous",
