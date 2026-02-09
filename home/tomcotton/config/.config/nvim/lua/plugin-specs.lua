@@ -72,6 +72,21 @@ local plugin_specs = {
   -- },
   { "machakann/vim-swap", event = "VeryLazy" },
 
+  {
+    "svermeulen/vim-extended-ft",
+    event = "VeryLazy",
+    config = function()
+      vim.cmd(
+        [[
+          nnoremap <silent> f <plug>ExtendedFtSearchFForward
+          nnoremap <silent> F <plug>ExtendedFtSearchFBackward
+          nnoremap <silent> t <plug>ExtendedFtSearchTForward
+          nnoremap <silent> T <plug>ExtendedFtSearchTBackward
+        ]]
+      )
+    end,
+  },
+
   -- {
   --   "nvim-telescope/telescope.nvim",
   --   cmd = "Telescope",
