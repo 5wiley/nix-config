@@ -552,6 +552,7 @@ in {
         "kubectl"
         "kube-ps1"
         "ssh-agent"
+        "sesh"
         # "tmux"  # Removed - managed by home-manager programs.tmux instead
         "z"
       ];
