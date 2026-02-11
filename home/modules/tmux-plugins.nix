@@ -202,9 +202,12 @@ in {
         bind -N "last-session (via sesh) " L run-shell "sesh last"
 
         bind -n "M-k" run-shell "sesh connect \"$(
-            sesh list --icons | fzf-tmux -p 80%,70% --no-border \
+            sesh list --icons | fzf-tmux -p 80%,70% \
               --reverse \
               --ansi \
+              --border rounded \
+              --border-label \" \$([[ -n \$SSH_CONNECTION ]] && echo '🌐' || echo '🏠') \$(hostname -s) \" \
+              --border-label-pos 3 \
               --list-border \
               --no-sort --prompt '⚡  ' \
               --color 'list-border:6,input-border:3,preview-border:2,header-bg:-1,header-border:6' \
@@ -276,7 +279,7 @@ in {
         # tmux-powerkit configuration
         set -g @powerkit_theme 'tokyo-night'
         set -g @powerkit_theme_variant 'night'
-        set -g @powerkit_plugins 'datetime,battery,cpu,memory,git,kubernetes'
+        set -g @powerkit_plugins 'datetime,battery,cpu,memory,git'
         set -g @powerkit_session_icon 'auto'
         set -g @powerkit_transparent 'true'
         set -g @powerkit_options_key 'P'

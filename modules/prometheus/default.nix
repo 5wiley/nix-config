@@ -38,13 +38,12 @@ in {
       (builtins.readFile ./prometheus.rules.yaml)
     ];
 
-    # Send to the local Alloy instance for forwarding to Grafana Cloud
-    # remoteWrite = [
-    #   {
-    #     name = "alloy";
-    #     url = "http://localhost:9999/api/v1/metrics/write";
-    #   }
-    # ];
+    remoteWrite = [
+      {
+        name = "mimir";
+        url = "http://nas-01.lan:9009/api/v1/push";
+      }
+    ];
 
     exporters = {
       blackbox = {
@@ -90,6 +89,53 @@ in {
           static_configs = [
             {
               targets = ["nas-01:9996"];
+            }
+          ];
+        }
+        {
+          job_name = "restic";
+          scrape_interval = "5m"; # Check every 5 minutes - backups run daily
+          scrape_timeout = "30s";
+          static_configs = [
+            {
+              targets = ["nas-01:9997"];
+            }
+          ];
+        }
+        {
+          job_name = "mimir";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          static_configs = [
+            {
+              targets = ["nas-01:9009"];
+            }
+          ];
+        }
+        {
+          job_name = "loki";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          static_configs = [
+            {
+              targets = ["nas-01:3100"];
+            }
+          ];
+        }
+        {
+          job_name = "garage";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          scheme = "http";
+          # To enable bearer token auth:
+          # 1. Create secret: agenix -e garage-metrics-token.age
+          # 2. Uncomment: bearer_token_file = config.age.secrets."garage-metrics-token".path;
+          static_configs = [
+            {
+              targets = ["nas-01:3903"];
             }
           ];
         }
@@ -143,7 +189,14 @@ in {
           params = {
             module = ["http_2xx"];
           };
-          static_configs = scrapeConfigs.tsnsrvBlackboxConfigs;
+          static_configs =
+            scrapeConfigs.tsnsrvBlackboxConfigs
+            ++ [
+              {
+                # Loki returns 404 at /, so probe /ready instead
+                targets = ["https://loki${promLib.tailscaleDomain}/ready"];
+              }
+            ];
           relabel_configs = [
             {
               source_labels = ["__address__"];
@@ -156,6 +209,36 @@ in {
             {
               target_label = "__address__";
               replacement = "127.0.0.1:9115";
+            }
+          ];
+        }
+        {
+          job_name = "dns_resolution";
+          metrics_path = "/probe";
+          params = {
+            module = ["dns_nas01"];
+          };
+          static_configs = [
+            {
+              targets = ["192.168.5.220:53"]; # dns-01.lan
+              labels = {
+                check = "nas-01.lan";
+                expected_ip = "192.168.5.42";
+              };
+            }
+          ];
+          relabel_configs = [
+            {
+              source_labels = ["__address__"];
+              target_label = "__param_target";
+            }
+            {
+              source_labels = ["__param_target"];
+              target_label = "dns_server";
+            }
+            {
+              target_label = "__address__";
+              replacement = "127.0.0.1:9115"; # blackbox exporter
             }
           ];
         }

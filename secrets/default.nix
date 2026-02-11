@@ -1,8 +1,13 @@
 {
   config,
   lib,
+  hostName,
   ...
-}: {
+}: let
+  commonLib = import ../hosts/common/lib.nix;
+  variables = commonLib.getHostVariables hostName;
+  isBotHost = builtins.elem hostName (variables.botHosts or []);
+in {
   # Generate postgres secrets here: https://supercaracal.github.io/scram-sha-256/
 
   # Unconditional secrets (no special permissions needed)
@@ -155,12 +160,12 @@
     group = "paperless";
   };
 
-  age.secrets."bcotton-atuin-key" = lib.mkIf config.services.clubcotton.atuin.enable {
-    age.secrets."bcotton-atuin-key" = {
-      file = ./bcotton-atuin-key.age;
-      owner = "bcotton";
-      group = "users";
-    };
+  # Atuin client key - needed on all machines where bcotton uses atuin
+  # (not just where the atuin server runs)
+  age.secrets."bcotton-atuin-key" = lib.mkIf (config.users.users ? bcotton) {
+    file = ./bcotton-atuin-key.age;
+    owner = "bcotton";
+    group = "users";
   };
 
   age.secrets."navidrome" = lib.mkIf config.services.clubcotton.navidrome.enable {
@@ -190,6 +195,29 @@
     file = ./nut-client.age;
   };
 
+  # Obsidian HTTP Basic Auth password (format: PASSWORD=secret)
+  # To enable:
+  # 1. Uncomment the entry in secrets/secrets.nix
+  # 2. Create the secret: agenix -e secrets/obsidian-bcotton.age
+  # 3. Add content: PASSWORD=your-secret-password
+  # 4. Uncomment this block
+  age.secrets."obsidian-bcotton" = lib.mkIf (config.services.clubcotton.obsidian.enable
+    && (config.services.clubcotton.obsidian.instances ? bcotton)) {
+    file = ./obsidian-bcotton.age;
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
+  age.secrets."obsidian-natalya" = lib.mkIf (config.services.clubcotton.obsidian.enable
+    && (config.services.clubcotton.obsidian.instances ? natalya)
+    && config.services.clubcotton.obsidian.instances.natalya.basicAuth.enable) {
+    file = ./obsidian-natalya.age;
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
   age.secrets."scanner-user-private-ssh-key" = lib.mkIf config.services.clubcotton.scanner.enable {
     file = ./scanner-user-private-ssh-key.age;
     owner = "scanner";
@@ -202,14 +230,30 @@
     group = "wallabag";
   };
 
-  age.secrets."syncoid-ssh-key" = lib.mkIf (config.services.clubcotton.syncoid.enable || config.services.clubcotton.borgmatic.enable) {
+  # Mimir S3 credentials (format: MIMIR_S3_ACCESS_KEY_ID=... MIMIR_S3_SECRET_ACCESS_KEY=...)
+  age.secrets."mimir-s3" = lib.mkIf config.services.clubcotton.mimir.enable {
+    file = ./mimir-s3.age;
+    owner = "mimir";
+    group = "mimir";
+    mode = "0400";
+  };
+
+  # Loki S3 credentials (format: LOKI_S3_ACCESS_KEY_ID=... LOKI_S3_SECRET_ACCESS_KEY=...)
+  age.secrets."loki-s3" = lib.mkIf config.services.clubcotton.loki.enable {
+    file = ./loki-s3.age;
+    owner = "loki";
+    group = "loki";
+    mode = "0400";
+  };
+
+  age.secrets."syncoid-ssh-key" = lib.mkIf (config.services.clubcotton.syncoid.enable || config.services.clubcotton.borgmatic.enable || config.services.clubcotton.restic.enable) {
     file = ./syncoid-ssh-key.age;
     owner =
-      if config.services.clubcotton.borgmatic.enable
+      if config.services.clubcotton.borgmatic.enable || config.services.clubcotton.restic.enable
       then "root"
       else "syncoid";
     group =
-      if config.services.clubcotton.borgmatic.enable
+      if config.services.clubcotton.borgmatic.enable || config.services.clubcotton.restic.enable
       then "root"
       else "syncoid";
     mode = "0400";
@@ -220,6 +264,57 @@
     owner = "root";
     group = "root";
   };
+
+  # Restic backup secrets
+  age.secrets."restic-password" = lib.mkIf config.services.clubcotton.restic.enable {
+    file = ./restic-password.age;
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
+  age.secrets."restic-b2-env" = lib.mkIf (config.services.clubcotton.restic.enable
+    && (config.services.clubcotton.restic.repositories ? b2)) {
+    file = ./restic-b2-env.age;
+    owner = "root";
+    group = "root";
+    mode = "0400";
+  };
+
+  # Cloudflare Tunnel token for secure internet exposure
+  age.secrets."cloudflare-tunnel-token" = lib.mkIf config.services.clubcotton.cloudflare-tunnel.enable {
+    file = ./cloudflare-tunnel-token.age;
+    owner = "cloudflared";
+    group = "cloudflared";
+    mode = "0400";
+  };
+
+  # Garage RPC secret key
+  age.secrets."garage-rpc-secret" = lib.mkIf config.services.clubcotton.garage.enable {
+    file = ./garage-rpc-secret.age;
+    owner = "garage";
+    group = "garage";
+    mode = "0400";
+  };
+
+  # Garage metrics bearer token (shared between Garage and Prometheus)
+  # To enable: 1) agenix -e garage-metrics-token.age  2) uncomment in secrets.nix  3) uncomment below
+  # age.secrets."garage-metrics-token" = lib.mkIf (
+  #   (config.services.clubcotton.garage.enable
+  #     && config.services.clubcotton.garage.metricsTokenFile != null)
+  #   || config.services.prometheus.enable
+  # ) {
+  #   file = ./garage-metrics-token.age;
+  #   owner =
+  #     if config.services.prometheus.enable
+  #     then "prometheus"
+  #     else "garage";
+  #   group =
+  #     if config.services.prometheus.enable
+  #     then "prometheus"
+  #     else "garage";
+  #   mode = "0400";
+  # };
 
   # Harmonia binary cache signing key
   age.secrets."harmonia-signing-key" = lib.mkIf config.services.clubcotton.harmonia.enable {
@@ -242,5 +337,51 @@
     owner = "root";
     group = "root";
     mode = "0444";
+  };
+
+  # LLM/Bot secrets - only on bot hosts
+  age.secrets."anthropic-api-key" = lib.mkIf isBotHost {
+    file = ./anthropic-api-key.age;
+    group = "llm-users";
+    mode = "0440";
+  };
+
+  age.secrets."openai-api-key" = lib.mkIf isBotHost {
+    file = ./openai-api-key.age;
+    group = "llm-users";
+    mode = "0440";
+  };
+
+  age.secrets."openrouter-api-key" = lib.mkIf isBotHost {
+    file = ./openrouter-api-key.age;
+    group = "llm-users";
+    mode = "0440";
+  };
+
+  age.secrets."moltbot-telegram-token" = lib.mkIf isBotHost {
+    file = ./moltbot-telegram-token.age;
+    owner = "larry";
+    group = "users";
+    mode = "0400";
+  };
+
+  age.secrets."moltbot-gateway-token" = lib.mkIf isBotHost {
+    file = ./moltbot-gateway-token.age;
+    owner = "larry";
+    group = "users";
+    mode = "0400";
+  };
+
+  # Bot host secrets - only on hosts in botHosts list
+  age.secrets."forgejo-password-larry" = lib.mkIf isBotHost {
+    file = ./forgejo-password-larry.age;
+    owner = "larry";
+    group = "users";
+  };
+
+  age.secrets."forgejo-token-larry" = lib.mkIf isBotHost {
+    file = ./forgejo-token-larry.age;
+    owner = "larry";
+    group = "users";
   };
 }

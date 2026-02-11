@@ -33,10 +33,63 @@ in {
   ];
 
   services.clubcotton = {
+    alloy-logs.enable = true;
     code-server.enable = true;
     nut-server.enable = true;
     nut-client.enable = true;
     tailscale.enable = true;
+    homepage.enable = true;
+  };
+
+  # Configure homepage dashboard
+  # Hosts and services are auto-populated from flake-modules/hosts.nix
+  # To add a new service, add it to homepageServices in flake-modules/hosts.nix
+  services.clubcotton.homepage = {
+    tailnetDomain = "bobtail-clownfish.ts.net";
+
+    # External bookmarks
+    bookmarks = [
+      {
+        External = [
+          {
+            GitHub = [
+              {
+                abbr = "GH";
+                href = "https://github.com";
+                icon = "github.svg";
+              }
+            ];
+          }
+          {
+            "Home Assistant" = [
+              {
+                abbr = "HA";
+                href = "http://homeassistant.lan:8123";
+                icon = "home-assistant.svg";
+              }
+            ];
+          }
+        ];
+      }
+    ];
+
+    # Miscellaneous external services
+    misc = [
+      {
+        "Home Assistant" = {
+          description = "Smart home control";
+          href = "http://homeassistant.lan:8123";
+          icon = "home-assistant.svg";
+        };
+      }
+      {
+        UniFi = {
+          description = "Network management";
+          href = "https://unifi.ui.com";
+          icon = "ubiquiti.svg";
+        };
+      }
+    ];
   };
 
   boot.loader.systemd-boot.enable = true;
@@ -147,7 +200,7 @@ in {
   # Turn on node_exporter
   services.prometheus = {
     # Exclude webdav service from blackbox monitoring
-    tsnsrvExcludeList = ["webdav"];
+    tsnsrvExcludeList = ["webdav" "loki"];
 
     exporters = {
     };

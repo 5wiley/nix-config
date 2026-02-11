@@ -34,6 +34,22 @@
           url = "http://localhost:${toString config.services.prometheus.port}";
           isDefault = true;
         }
+        {
+          name = "Mimir";
+          type = "prometheus";
+          access = "proxy";
+          uid = "PAE45454D0EDB9216";
+          url = "http://nas-01.lan:9009/prometheus";
+          isDefault = false;
+        }
+        {
+          name = "Loki";
+          type = "loki";
+          access = "proxy";
+          uid = "loki-datasource";
+          url = "http://nas-01.lan:3100";
+          isDefault = false;
+        }
       ];
 
       dashboards.settings.providers = [

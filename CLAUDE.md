@@ -54,6 +54,21 @@ nixos-rebuild switch --flake .#hostname \
   --build-host localhost
 ```
 
+### CI / Forgejo Actions
+
+```bash
+just ci                      # List recent Forgejo Action runs
+just ci -n 20                # List last 20 runs
+just ci -s failure           # Show only failed runs
+just ci -b main              # Filter by branch
+just ci show 401             # Show details of run #401
+just ci logs 401             # Show logs for run #401
+just ci logs 401 1           # Show logs for job index 1 of run #401
+```
+
+The script reads your API token from the `tea` CLI config at `~/.config/tea/config.yml`.
+Override with `FORGEJO_TOKEN` env var if needed.
+
 ### Testing
 
 ```bash
@@ -198,19 +213,8 @@ See `secrets/README-NIX-CACHE.md` for an example of proper secret documentation.
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
 5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+ - DO no commit or push unless asked

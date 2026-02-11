@@ -4,27 +4,35 @@
   ...
 }: {
   imports = [
+    ./alloy-logs
     ./arr
     ./atuin
     ./bonob
     ./borgmatic
     ./calibre
     ./calibre-web
+    ./cloudflare-tunnel
     ./filebrowser
     ./forgejo
     ./freshrss
+    ./garage
     ./harmonia
+    ./homepage
     ./hyprland
     ./immich
     ./jellyfin
     ./kavita
+    ./loki
+    ./mimir
     ./navidrome
     ./nix-cache-proxy
+    ./obsidian
     ./nut-client
     ./nut-server
     ./open-webui
     ./paperless
     ./pinchflat
+    ./restic
     ./roon-server
     ./sabnzbd
     ./scanner

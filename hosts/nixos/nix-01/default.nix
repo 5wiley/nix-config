@@ -26,9 +26,21 @@ in {
   ];
 
   services.clubcotton = {
+    alloy-logs.enable = true;
     code-server.enable = true;
     nut-client.enable = true;
     bonob.enable = true;
+    # Cloudflare Tunnel for secure internet exposure
+    # To enable:
+    # 1. Create tunnel in Cloudflare Zero Trust dashboard
+    # 2. Create secret: agenix -e secrets/cloudflare-tunnel-token.age
+    # 3. Paste the tunnel token
+    # 4. Uncomment below and rebuild
+    cloudflare-tunnel = {
+      enable = true;
+      tokenFile = config.age.secrets.cloudflare-tunnel-token.path;
+    };
+
     forgejo-runner = {
       enable = true;
       instances = {
@@ -53,6 +65,39 @@ in {
             "debian-latest:docker://node:20-bookworm"
           ];
           capacity = 2;
+        };
+      };
+    };
+
+    obsidian = {
+      enable = true;
+      instances.bcotton = {
+        httpPort = 13000;
+        httpsPort = 13001;
+        user = "bcotton";
+        group = "users";
+        vaultDir = "/home/bcotton/obsidian-vaults";
+        sshDir = "/home/bcotton/.ssh";
+        # To enable HTTP Basic Auth:
+        # 1. Create the secret: agenix -e secrets/obsidian-bcotton.age
+        # 2. Add content: PASSWORD=your-secret-password
+        # 3. Uncomment the basicAuth block below
+        basicAuth = {
+          enable = true;
+          username = "bcotton";
+          environmentFile = config.age.secrets.obsidian-bcotton.path;
+        };
+      };
+      instances.natalya = {
+        httpPort = 13002;
+        httpsPort = 13003;
+        user = "natalya";
+        group = "users";
+        vaultDir = "/home/natalya/obsidian-vaults";
+        basicAuth = {
+          enable = false;
+          username = "natalya";
+          environmentFile = config.age.secrets.obsidian-natalya.path;
         };
       };
     };
