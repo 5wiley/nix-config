@@ -78,9 +78,9 @@ in {
     ];
 
     # Keyboard
-    system.keyboard.enableKeyMapping = false;
+    system.keyboard.enableKeyMapping = true;
     system.keyboard.remapCapsLockToEscape = false;
-    system.keyboard.remapCapsLockToControl = false;
+    system.keyboard.remapCapsLockToControl = true;
 
     # Add ability to used TouchID for sudo authentication
     security.pam.services.sudo_local.touchIdAuth = true;

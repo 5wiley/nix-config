@@ -81,6 +81,7 @@ set preview true
 # === Visual Changes ===
 
 set relativenumber true
+set number true
 
 # mkdir command. See wiki if you want it to select created dir
 map a :push %mkdir<space>
