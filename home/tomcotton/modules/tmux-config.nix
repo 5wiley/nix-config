@@ -184,11 +184,6 @@ in {
           set -g @fzf-url-open '${localPackages.xdg-open-remote}/bin/xdg-open-remote'
         ''}
 
-        # Restore default session chooser (prefix-s)
-        # bind s choose-tree -Zs
-        # Create new session (prefix-S)
-        # bind S new-session
-
         # Vim style pane selection
         bind h select-pane -L
         bind j select-pane -D
@@ -216,7 +211,7 @@ in {
         bind -N "last-session (via sesh) " L run-shell "sesh last"
 
         # sesh
-        bind -n "M-k" run-shell "sesh connect \"$(
+        bind s run-shell "sesh connect \"$(
             sesh list --icons | fzf-tmux -p 80%,70% --no-border \
               --reverse \
               --ansi \
