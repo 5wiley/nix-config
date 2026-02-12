@@ -580,6 +580,10 @@ in {
         add-zsh-hook chpwd tmux-window-name
       fi
 
+      if [[ "$CLAUDECODE" != "1" ]]; then
+        eval "$(zoxide init zsh)"; alias cd="z"
+      fi
+
       bindkey -e
       bindkey '^[[A' up-history
       bindkey '^[[B' down-history
@@ -626,7 +630,10 @@ in {
   programs.home-manager.enable = true;
   programs.neovim.enable = true;
   programs.nix-index.enable = true;
-  #  programs.zoxide.enable = true;
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = false; # Using zsh-defer for deferred init in initContent
+  };
 
   programs.neovim = {
     # https://nixos.wiki/wiki/Neovim
