@@ -532,6 +532,10 @@ in {
             cd "$(command lf -print-last-dir "$@")"
         }
 
+        if [[ "$CLAUDECODE" != "1" ]]; then
+          eval "$(zoxide init zsh)"; alias cd="z"; alias cdi="zi"
+        fi
+
         # For some reason this was aliased to vi, seems regresive
         # unalias nvim
 
@@ -554,7 +558,6 @@ in {
         "ssh-agent"
         "sesh"
         # "tmux"  # Removed - managed by home-manager programs.tmux instead
-        "z"
       ];
     };
 
@@ -628,7 +631,7 @@ in {
   programs.nix-index.enable = true;
   programs.zoxide = {
     enable = true;
-    # enableZshIntegration = false; # Using zsh-defer for deferred init in initContent
+    enableZshIntegration = false;
   };
 
   programs.neovim = {
