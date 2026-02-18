@@ -1,16 +1,3 @@
 [[session]]
-name = "default"
-
-[[session]]
-name = "admin"
-startup_command = "ssh admin -t 'tmux a || tmux'"
-
-[[session]]
-name = "nix-01"
-startup_command = "ssh -q nix-01 -t 'tmux a || tmux'"
-
-[[session]]
-name = "nix-03"
-startup_command = "ssh -q nix-03 -t 'tmux a || tmux'"
-
-
+name = "explore"
+startup_command = "lfcd"
