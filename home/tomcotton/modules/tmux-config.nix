@@ -310,25 +310,6 @@ in {
     };
 
     programs.zsh.initContent = ''
-      tmux-window-name() {
-        (${builtins.toString tmux-window-name}/share/tmux-plugins/tmux-window-name/scripts/rename_session_windows.py &)
-      }
-
-      tmux-session-name() {
-        if [[ -n "$TMUX" ]]; then
-          # Get the working directory of window 1's active pane
-          local window1_dir=$(tmux display-message -p -t 1 '#{pane_current_path}' 2>/dev/null)
-          if [[ -n "$window1_dir" ]]; then
-            local dir_name=$(basename "$window1_dir")
-            tmux rename-session "$dir_name" 2>/dev/null || true
-          fi
-        fi
-      }
-
-      if [[ -n "$TMUX" ]]; then
-        add-zsh-hook chpwd tmux-window-name
-        add-zsh-hook chpwd tmux-session-name
-      fi
     '';
   };
 }

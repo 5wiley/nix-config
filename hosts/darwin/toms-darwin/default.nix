@@ -217,6 +217,7 @@ in {
       NSGlobalDomain.InitialKeyRepeat = 20;
       NSGlobalDomain.KeyRepeat = 2;
       NSGlobalDomain."com.apple.mouse.tapBehavior" = 1;
+      NSGlobalDomain.NSWindowShouldDragOnGesture = true; # Use ctrl+cmd to drag a window from anywhere
       LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
       loginwindow.GuestEnabled = false;
       hitoolbox.AppleFnUsageType = null;

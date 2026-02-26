@@ -6,7 +6,7 @@
 after-startup-command = []
 
 # Start AeroSpace at login
-start-at-login = true 
+start-at-login = true
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
@@ -35,7 +35,7 @@ default-root-container-orientation = 'auto'
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
 # Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
 # Also see: https://nikitabobko.github.io/AeroSpace/goodies#disable-hide-app
-automatically-unhide-macos-hidden-apps = true
+automatically-unhide-macos-hidden-apps = false
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -99,7 +99,7 @@ automatically-unhide-macos-hidden-apps = true
     # alt-comma = 'layout accordion horizontal vertical'
 
     # ctrl-alt-leftSquareBracket = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace left'
-    # ctrl-alt-rightSquareBracket = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace right' 
+    # ctrl-alt-rightSquareBracket = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
     ctrl-alt-h = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace left'
