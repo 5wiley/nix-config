@@ -1,3 +1,8 @@
 [[session]]
 name = "explore"
 startup_command = "lfcd"
+
+[[session]]
+name = "scratch"
+startup_command = "vi ~/tmp/neotemp.md"
+
