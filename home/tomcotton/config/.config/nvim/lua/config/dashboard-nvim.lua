@@ -75,6 +75,12 @@ conf.center = {
     key = "<Leader> f r",
   },
   {
+    icon = "  ",
+    desc = "Scratchpad",
+    action = "Open temp note",
+    key = "<Leader> f t"
+  },
+  {
     icon = "󰈬  ",
     desc = "Project grep                            ",
     action = "FzfLua live_grep",
