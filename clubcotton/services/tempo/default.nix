@@ -183,6 +183,10 @@ in {
             };
           };
         };
+
+        memberlist = {
+          bind_port = 7947; # Use 7947 instead of 7946 (used by Mimir)
+        };
       };
     };
 
