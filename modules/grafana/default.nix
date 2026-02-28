@@ -60,6 +60,14 @@
           url = "http://nas-01.lan:3100";
           isDefault = false;
         }
+        {
+          name = "Tempo";
+          type = "tempo";
+          access = "proxy";
+          uid = "tempo-datasource";
+          url = "http://nas-01.lan:3200";
+          isDefault = false;
+        }
       ];
 
       dashboards.settings.providers = [

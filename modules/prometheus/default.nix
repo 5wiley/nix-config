@@ -125,6 +125,17 @@ in {
           ];
         }
         {
+          job_name = "tempo";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          static_configs = [
+            {
+              targets = ["nas-01:3200"];
+            }
+          ];
+        }
+        {
           job_name = "garage";
           scrape_interval = "30s";
           scrape_timeout = "10s";
@@ -195,6 +206,10 @@ in {
               {
                 # Loki returns 404 at /, so probe /ready instead
                 targets = ["https://loki${promLib.tailscaleDomain}/ready"];
+              }
+              {
+                # Tempo /ready health check
+                targets = ["https://tempo${promLib.tailscaleDomain}/ready"];
               }
             ];
           relabel_configs = [
