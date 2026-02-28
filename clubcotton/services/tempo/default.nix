@@ -90,7 +90,7 @@ in {
       settings = {
         server = {
           http_listen_port = cfg.port;
-          grpc_listen_port = 9096; # Use 9096 instead of 9095 (used by Mimir)
+          grpc_listen_port = 9097; # Use 9097 (9095=Mimir, 9096=Loki)
           log_level = "warn";
         };
 
