@@ -191,6 +191,8 @@ in {
       DynamicUser = lib.mkForce false;
       User = "tempo";
       Group = "tempo";
+      # Override ExecStart to add --config.expand-env flag for environment variable substitution
+      ExecStart = lib.mkForce "${pkgs.tempo}/bin/tempo --config.expand-env --config.file=${config.services.tempo.configFile}";
     };
 
     users.users.tempo = {
