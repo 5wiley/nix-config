@@ -45,6 +45,7 @@
     ./searxng
     ./syncoid
     ./technitium
+    ./tempo
     ./wallabag
     ./webdav
   ];

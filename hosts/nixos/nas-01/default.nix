@@ -168,6 +168,7 @@ in {
     searxng.enable = true;
     sonarr.enable = true;
     syncoid.enable = true;
+    tempo.enable = true;
     tailscale.enable = true;
     ntfy.enable = true;
     ntfy.baseURL = "https://ntfy.bobtail-clownfish.ts.net";
@@ -231,6 +232,11 @@ in {
   services.clubcotton.loki = {
     s3.endpoint = "nas-01:3900";
     s3.environmentFile = config.age.secrets."loki-s3".path;
+  };
+
+  services.clubcotton.tempo = {
+    s3.endpoint = "nas-01:3900";
+    s3.environmentFile = config.age.secrets."tempo-s3".path;
   };
 
   services.clubcotton.nix-cache-proxy.zfsDataset = {
