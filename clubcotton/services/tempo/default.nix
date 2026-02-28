@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 with lib; let
@@ -84,6 +85,8 @@ in {
   config = lib.mkIf cfg.enable {
     services.tempo = {
       enable = true;
+      # Enable environment variable expansion in configuration
+      extraFlags = ["-config.expand-env=true"];
       settings = {
         server = {
           http_listen_port = cfg.port;
@@ -191,8 +194,6 @@ in {
       DynamicUser = lib.mkForce false;
       User = "tempo";
       Group = "tempo";
-      # Override ExecStart to add --config.expand-env flag for environment variable substitution
-      ExecStart = lib.mkForce "${pkgs.tempo}/bin/tempo --config.expand-env --config.file=${config.services.tempo.configFile}";
     };
 
     users.users.tempo = {
