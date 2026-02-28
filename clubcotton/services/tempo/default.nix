@@ -90,6 +90,7 @@ in {
       settings = {
         server = {
           http_listen_port = cfg.port;
+          grpc_listen_port = 9096; # Use 9096 instead of 9095 (used by Mimir)
           log_level = "warn";
         };
 
