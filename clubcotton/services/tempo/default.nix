@@ -149,7 +149,7 @@ in {
 
         querier = {
           frontend_worker = {
-            frontend_address = "127.0.0.1:9095";
+            frontend_address = "127.0.0.1:9097"; # Use Tempo's gRPC port, not Mimir's
           };
         };
 
