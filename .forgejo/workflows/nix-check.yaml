@@ -154,28 +154,3 @@ jobs:
           else
             echo "All $host_count hosts built successfully in ${total_elapsed}s"
           fi
-
-      - name: Push build results to binary cache
-        if: always()
-        run: |
-          echo "Pushing successful build results to binary cache..."
-          pushed=0
-          push_failed=0
-
-          for link in /tmp/build-results/*.link; do
-            [ -e "$link" ] || continue
-            host=$(basename "$link" .link)
-            store_path=$(readlink -f "$link")
-            echo "::group::Push $host ($store_path)"
-            if nix copy --to ssh://nix-builder@nas-01.lan "$store_path" 2>&1; then
-              echo "OK pushed $host to cache"
-              pushed=$((pushed + 1))
-            else
-              echo "WARNING: failed to push $host to cache (non-fatal)"
-              push_failed=$((push_failed + 1))
-            fi
-            echo "::endgroup::"
-          done
-
-          echo ""
-          echo "Cache push: $pushed succeeded, $push_failed failed"
