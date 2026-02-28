@@ -68,6 +68,10 @@
         nixpkgs = inputs.nixpkgs;
       });
 
+      tempo = pkgs.testers.nixosTest (import ../clubcotton/services/tempo/test.nix {
+        nixpkgs = inputs.nixpkgs;
+      });
+
       firewall = pkgs.testers.nixosTest (import ../tests/firewall-integration.nix {
         nixpkgs = inputs.nixpkgs;
       });

@@ -816,6 +816,97 @@ groups:
       summary: "No logs from {{ $labels.hostname }}"
       description: "Host {{ $labels.hostname }} has not sent any logs to Loki in the last hour. Check alloy-logs.service on the host."
 
+  # Grafana Tempo Monitoring
+  - alert: TempoDown
+    expr: up{job="tempo"} == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Tempo is down"
+      description: "Tempo on {{ $labels.instance }} has been unreachable for 5 minutes"
+
+  - alert: TempoIngestionFailures
+    expr: rate(tempo_distributor_spans_received_total{status="error",job="tempo"}[5m]) > 0.1
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo span ingestion failures"
+      description: "Tempo on {{ $labels.instance }} is failing to ingest spans at {{ printf \"%.1f\" $value }}/sec"
+
+  - alert: TempoRequestErrors
+    expr: rate(tempo_http_requests_total{job="tempo",status_code=~"5.."}[5m]) > 0.5
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo returning server errors"
+      description: "Tempo on {{ $labels.instance }} is returning 5xx errors at {{ printf \"%.1f\" $value }}/sec for {{ $labels.route }}"
+
+  - alert: TempoHighMemoryUsage
+    expr: process_resident_memory_bytes{job="tempo"} / 1073741824 > 2
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo high memory usage"
+      description: "Tempo on {{ $labels.instance }} is using {{ printf \"%.1f\" $value }}GB of memory"
+
+  - alert: TempoCompactionFailed
+    expr: increase(tempo_compactor_blocks_failed_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo compaction failures"
+      description: "Tempo compactor on {{ $labels.instance }} has had failed runs in the last hour"
+
+  - alert: TempoWALCorruption
+    expr: increase(tempo_ingester_wal_corruptions_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Tempo WAL corruption detected"
+      description: "Tempo ingester on {{ $labels.instance }} has detected WAL corruption"
+
+  - alert: TempoBlockFlushFailures
+    expr: increase(tempo_ingester_failed_flushes_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo block flush failures"
+      description: "Tempo ingester on {{ $labels.instance }} is failing to flush blocks to storage"
+
+  - alert: TempoHighQueryLatency
+    expr: histogram_quantile(0.95, rate(tempo_request_duration_seconds_bucket{job="tempo",route="/api/traces"}[5m])) > 5
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo high query latency"
+      description: "Tempo on {{ $labels.instance }} has p95 query latency of {{ printf \"%.2f\" $value }}s for trace queries"
+
+  - alert: TempoRingUnhealthy
+    expr: tempo_ring_members{job="tempo",state="UNHEALTHY"} > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo ring has unhealthy members"
+      description: "Tempo ring on {{ $labels.instance }} has {{ $value }} unhealthy members"
+
+  - alert: TempoS3Errors
+    expr: increase(tempo_storage_requests_total{job="tempo",status_code=~"5.."}[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo S3 storage errors"
+      description: "Tempo on {{ $labels.instance }} is encountering S3 storage errors at {{ printf \"%.1f\" $value }}/sec"
+
 # Incus Container/VM Monitoring
 - name: incus_recording_rules
   interval: 30s

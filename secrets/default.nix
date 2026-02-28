@@ -255,6 +255,14 @@ in {
     mode = "0400";
   };
 
+  # Tempo S3 credentials (format: TEMPO_S3_ACCESS_KEY_ID=... TEMPO_S3_SECRET_ACCESS_KEY=...)
+  age.secrets."tempo-s3" = lib.mkIf config.services.clubcotton.tempo.enable {
+    file = ./tempo-s3.age;
+    owner = "tempo";
+    group = "tempo";
+    mode = "0400";
+  };
+
   age.secrets."syncoid-ssh-key" = lib.mkIf (config.services.clubcotton.syncoid.enable || config.services.clubcotton.borgmatic.enable || config.services.clubcotton.restic.enable) {
     file = ./syncoid-ssh-key.age;
     owner =
