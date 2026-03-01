@@ -338,3 +338,37 @@ To resolve an IP address to a hostname:
   - Persistent service failures (stuck imports, repeated crashes)
   - Configuration bugs (missing PATH packages, wrong permissions)
   - Anything that generates >100 errors/day and isn't cosmetic
+
+## Publishing the Report as a Forgejo Issue
+
+After presenting the report to the user and filing any action item bugs, publish the full report as a Forgejo issue for the daily log archive.
+
+### Steps
+
+1. **Check for duplicate report** — avoid filing twice for the same day:
+   ```bash
+   ./scripts/forgejo.sh issue list --label=report --limit=5
+   ```
+   If a report for today's date already exists, skip creating a new one (or add a comment to the existing one with updated findings).
+
+2. **Create the report issue**:
+   ```bash
+   ./scripts/forgejo.sh issue create \
+     --title "Infra Report — YYYY-MM-DD" \
+     --body "<full markdown report>" \
+     --label report
+   ```
+
+   - **Title format**: `Infra Report — YYYY-MM-DD` (use today's date)
+   - **Label**: `report`
+   - **Body**: The complete markdown report (same content shown to the user), with these additions:
+     - In the Action Items section, reference any bug issues filed with their `#NNN` numbers
+     - Append a footer: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+
+3. **Report the issue URL** to the user so they can find it.
+
+### Notes
+
+- Reports are kept open by default as a browsable daily log
+- Old reports can be bulk-closed periodically: `./scripts/forgejo.sh issue list --label=report` then close as needed
+- The `report` label (blue, #0075ca) distinguishes these from bug issues in the issue tracker

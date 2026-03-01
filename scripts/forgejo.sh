@@ -15,6 +15,8 @@ Commands:
   issue create --title "..." --body "..." [--label <name>]
   issue close  <N> [--comment "..."]
   issue comment <N> --body "..."
+  label list
+  label create --name "..." --color "hex" [--description "..."]
   pr create    --title "..." --body "..." --head <branch> [--base main]
 
 Options:
@@ -151,6 +153,57 @@ cmd_issue_comment() {
   echo "Added comment to issue #${issue_num}"
 }
 
+# --- Label commands ---
+
+cmd_label_list() {
+  local data
+  data=$(api_get "repos/${REPO}/labels?limit=50") || {
+    log_error "API request failed"
+    exit 1
+  }
+
+  echo "$data" | jq -r '.[] | "\(.id)\t\(.name)\t#\(.color)\t\(.description // "")"' | \
+    column -t -s $'\t'
+}
+
+cmd_label_create() {
+  local name="" color="" description=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --name=*) name="${1#--name=}"; shift ;;
+      --name)   name="$2"; shift 2 ;;
+      --color=*) color="${1#--color=}"; shift ;;
+      --color)   color="$2"; shift 2 ;;
+      --description=*) description="${1#--description=}"; shift ;;
+      --description)   description="$2"; shift 2 ;;
+      *) log_error "unknown option: $1"; exit 1 ;;
+    esac
+  done
+
+  if [[ -z "$name" || -z "$color" ]]; then
+    log_error "label create requires --name and --color"
+    exit 1
+  fi
+
+  # Strip leading # from color if present
+  color="${color#\#}"
+
+  local payload
+  payload=$(jq -n --arg name "$name" --arg color "$color" --arg desc "$description" \
+    '{name: $name, color: $color, description: $desc}')
+
+  local result
+  result=$(api_post "repos/${REPO}/labels" "$payload") || {
+    log_error "failed to create label"
+    exit 1
+  }
+
+  local id label_name
+  id=$(echo "$result" | jq -r '.id')
+  label_name=$(echo "$result" | jq -r '.name')
+  echo "Created label '${label_name}' (id: ${id})"
+}
+
 # --- PR commands ---
 
 cmd_pr_create() {
@@ -230,6 +283,18 @@ case "$RESOURCE" in
         cmd_issue_comment "$@"
         ;;
       *) log_error "unknown issue command: $ACTION"; usage; exit 1 ;;
+    esac
+    ;;
+  label)
+    if [[ $# -eq 0 ]]; then
+      log_error "label requires a subcommand (list, create)"
+      exit 1
+    fi
+    ACTION="$1"; shift
+    case "$ACTION" in
+      list)   cmd_label_list "$@" ;;
+      create) cmd_label_create "$@" ;;
+      *) log_error "unknown label command: $ACTION"; usage; exit 1 ;;
     esac
     ;;
   pr)
