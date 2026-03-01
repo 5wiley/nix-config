@@ -205,6 +205,30 @@ Check for Loki push failures (HTTP 400/500), decompression errors, or other scra
 
 Note: These logs are only available if the forgejo-log-scraper is working correctly.
 
+### 15. Prometheus Alerts (firing)
+
+Query the Prometheus alerts API directly:
+
+```bash
+curl -sf http://admin:9001/api/v1/alerts | jq -r '.data.alerts[] | "\(.labels.alertname)\t\(.labels.instance // "-")\t\(.labels.severity)\t\(.state)\t\(.activeAt)"'
+```
+
+This returns all currently firing alerts. Cross-reference with findings from the Loki queries.
+
+**Known expected alerts:**
+- `Watchdog` (severity: none) — always firing; dead man's switch for Alertmanager health. Ignore.
+
+**Alerts that indicate real issues:**
+- `HostDown` — a host is unreachable by Prometheus for >15 minutes
+- `BlackboxProbeFailed` — an HTTP endpoint probe has been failing for >15 minutes
+- `HostSystemdServiceCrashed` — a systemd service is in failed state
+- `HostOomKillDetected` — OOM kill occurred
+- `HostRaidDiskFailure` — RAID degradation
+- `DnsResolutionFailed` — DNS resolution check failed
+- `Tempo*` alerts — Tempo-specific issues (ingestion failures, WAL corruption, S3 errors, etc.)
+
+Include firing alerts (excluding Watchdog) in the report under a **Prometheus Alerts** section, before the Errors section. For each alert, show: alert name, instance, severity, and how long it's been firing.
+
 ## Report Format
 
 Present findings as a structured report with these sections:
@@ -235,6 +259,12 @@ For failures, add detail paragraphs below the table explaining:
 ### UPS
 Brief status. "Healthy" if no issues, or detail any unavailability windows.
 
+### Prometheus Alerts
+| Alert | Instance | Severity | Firing Since | Notes |
+|-------|----------|----------|--------------|-------|
+Table of currently firing alerts (excluding Watchdog).
+If no alerts are firing (besides Watchdog), note "No active alerts."
+
 ### Errors
 | Host | Count | Details |
 |------|-------|---------|
@@ -242,6 +272,7 @@ Only hosts with errors. Note if errors are cosmetic/expected.
 
 ### Other Checks
 Bullet list of categories checked with "None" or brief findings:
+- Prometheus alerts (firing, excluding Watchdog)
 - OOM kills
 - ZFS/disk issues
 - Kernel errors

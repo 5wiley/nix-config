@@ -216,7 +216,7 @@ in {
   # Turn on node_exporter
   services.prometheus = {
     # Exclude webdav service from blackbox monitoring
-    tsnsrvExcludeList = ["webdav" "loki"];
+    tsnsrvExcludeList = ["webdav" "loki" "tempo"];
 
     exporters = {
     };
