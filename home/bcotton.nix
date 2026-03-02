@@ -722,7 +722,7 @@
       unstablePkgs.sesh
       unstablePkgs.uv
       tldr
-      unstablePkgs.zed-editor
+      zed-editor
       zsh-defer # Step 4: Needed for deferred initialization
 
       # Migrated from Homebrew brews
@@ -734,7 +734,7 @@
       jsonnet-bundler
 
       # Development tools
-      azure-cli
+      (azure-cli.withExtensions [azure-cli.extensions.account])
       devbox
       golangci-lint
       nodejs_24

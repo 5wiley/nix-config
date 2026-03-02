@@ -20,7 +20,7 @@ in {
     # These are packages are just for darwin systems
     environment.systemPackages = with pkgs; [
       kind
-      esphome
+      # esphome  # disabled: depends on bleak which is Linux-only
       esptool
       # Node and friends
       nodejs_22
