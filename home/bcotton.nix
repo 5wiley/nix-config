@@ -8,6 +8,7 @@
   nixosHosts ? [],
   workmuxPackage,
   crushPackage,
+  worktrunkPackage,
   inputs,
   ...
 }: {
@@ -717,6 +718,7 @@
           '';
         })
       crushPackage
+      worktrunkPackage
 
       procs
       unstablePkgs.sesh

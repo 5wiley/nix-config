@@ -46,6 +46,7 @@
         localPackages = self.legacyPackages.${system}.localPackages;
         workmuxPackage = inputs.workmux.packages.${system}.default;
         crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
+        worktrunkPackage = inputs.worktrunk.packages.${system}.default;
       };
     };
 
@@ -382,6 +383,7 @@
               localPackages = self.legacyPackages.${system}.localPackages;
               workmuxPackage = inputs.workmux.packages.${system}.default;
               crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
+              worktrunkPackage = inputs.worktrunk.packages.${system}.default;
             };
           }
           ../hosts/common/common-packages.nix
