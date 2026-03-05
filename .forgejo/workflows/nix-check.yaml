@@ -79,9 +79,26 @@ jobs:
       - name: Build all NixOS host configurations
         run: |
           echo "Building all NixOS host system closures..."
-          hosts=$(nix eval --raw '.#nixosConfigurations' --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)')
+          all_hosts=$(nix eval --raw '.#nixosConfigurations' --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)')
+
+          # Skip hosts with VM/container images that aren't in production yet
+          skip="incus-testing nix-04"
+          hosts=""
+          skipped=""
+          for h in $all_hosts; do
+            case " $skip " in
+              *" $h "*) skipped="$skipped $h" ;;
+              *) hosts="$hosts
+$h" ;;
+            esac
+          done
+          hosts=$(echo "$hosts" | sed '/^$/d')
+
           host_count=$(echo "$hosts" | wc -l)
           echo "Found $host_count hosts to build"
+          if [ -n "$skipped" ]; then
+            echo "Skipped (not in production):$skipped"
+          fi
 
           # Pre-build diagnostics
           echo ""
