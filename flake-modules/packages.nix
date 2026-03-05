@@ -10,6 +10,10 @@
         # Cross-platform packages
         primp = pkgs.python3Packages.callPackage ../pkgs/primp {};
         gwtmux = pkgs.callPackage ../pkgs/gwtmux {};
+        # playwright-cli: Token-efficient browser automation CLI for AI coding agents
+        playwright-cli = pkgs.callPackage ../pkgs/playwright-cli (
+          lib.optionalAttrs pkgs.stdenv.isDarwin {chromium = null;}
+        );
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -32,21 +36,19 @@
         remote-notify = pkgs.callPackage ../pkgs/remote-notify {};
         # osc52-copy: Copy to clipboard via OSC52 escape sequence (for tmux-fingers)
         osc52-copy = pkgs.callPackage ../pkgs/osc52-copy {};
-        # playwright-cli: Token-efficient browser automation CLI for AI coding agents
-        playwright-cli = pkgs.callPackage ../pkgs/playwright-cli {};
       };
 
     # Expose localPackages via legacyPackages for backward compatibility
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux;
+        inherit (config.packages) primp gwtmux playwright-cli;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver;
       }
       // lib.optionalAttrs pkgs.stdenv.isLinux {
-        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy playwright-cli;
+        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy;
       };
   };
 }

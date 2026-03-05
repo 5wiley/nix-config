@@ -775,7 +775,7 @@
       # macOS-only: tmux clipboard integration
       reattach-to-user-namespace
     ]
-    ++ lib.optionals stdenv.isLinux [
+    ++ [
       localPackages.playwright-cli
     ]
     ++ [

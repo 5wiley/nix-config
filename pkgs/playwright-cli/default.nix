@@ -1,10 +1,11 @@
 {
   lib,
+  stdenv,
   buildNpmPackage,
   fetchFromGitHub,
   makeWrapper,
   nodejs,
-  chromium,
+  chromium ? null,
 }:
 buildNpmPackage rec {
   pname = "playwright-cli";
@@ -28,10 +29,12 @@ buildNpmPackage rec {
   nativeBuildInputs = [makeWrapper];
 
   postInstall = ''
-    # Playwright hardcodes /opt/google/chrome/chrome for its chrome channel.
-    # Patch it to use nixpkgs chromium instead.
-    substituteInPlace $out/lib/node_modules/@playwright/cli/node_modules/playwright-core/lib/server/registry/index.js \
-      --replace-quiet '/opt/google/chrome/chrome' '${chromium}/bin/chromium'
+    ${lib.optionalString (chromium != null) ''
+      # Playwright hardcodes /opt/google/chrome/chrome for its chrome channel.
+      # Patch it to use nixpkgs chromium instead.
+      substituteInPlace $out/lib/node_modules/@playwright/cli/node_modules/playwright-core/lib/server/registry/index.js \
+        --replace-quiet '/opt/google/chrome/chrome' '${chromium}/bin/chromium'
+    ''}
 
     wrapProgram $out/bin/playwright-cli \
       --set PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS "true" \
@@ -42,7 +45,7 @@ buildNpmPackage rec {
     description = "Token-efficient CLI for browser automation, designed for AI coding agents";
     homepage = "https://github.com/microsoft/playwright-cli";
     license = lib.licenses.asl20;
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
     mainProgram = "playwright-cli";
   };
 }
