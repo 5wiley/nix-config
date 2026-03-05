@@ -94,24 +94,37 @@ local plugin_specs = {
   --     "nvim-telescope/telescope-symbols.nvim",
   --   },
   -- },
-  -- {
-  --   'romgrk/barbar.nvim',
-  --   dependencies = {
-  --     'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
-  --     'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
-  --   },
-  --   init = function() vim.g.barbar_auto_setup = false end,
-  --   opts = {
-  --     require("config.barbar")
-  --   },
-  --   version = '^1.0.0', -- optional: only update when a new 1.x version is released
-  -- },
+  {
+    'romgrk/barbar.nvim',
+    dependencies = {
+      'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
+      'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
+    },
+    init = function() vim.g.barbar_auto_setup = false end,
+    opts = {
+      require("config.barbar")
+    },
+    version = '^1.0.0', -- optional: only update when a new 1.x version is released
+  },
   {
     "ibhagwan/fzf-lua",
     config = function()
       require("config.fzf-lua")
     end,
     event = "VeryLazy",
+  },
+  {
+    "epwalsh/obsidian.nvim",
+    version = "*",  -- recommended, use latest release instead of latest commit
+    lazy = true,
+    ft = "markdown",
+    dependencies = {
+      -- Required.
+      "nvim-lua/plenary.nvim",
+    },
+    config = function()
+      require("config.obsidian")
+    end,
   },
   -- {
   --   "lmburns/lf.nvim",
@@ -128,13 +141,13 @@ local plugin_specs = {
   --   },
   -- },
 
-  -- {
-  --   'akinsho/toggleterm.nvim',
-  --   version = "*",
-  --   config = function()
-  --     require("config.toggleterm")
-  --   end,
-  -- },
+  {
+    'akinsho/toggleterm.nvim',
+    version = "*",
+    config = function()
+      require("config.toggleterm")
+    end,
+  },
 
   -- scrolloff_percentage: controls how close the cursor can be to the top or bottom
   --                       of the screen before scrolling begins

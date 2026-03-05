@@ -8,3 +8,4 @@ vim.fn['pencil#init']()
 
 vim.opt.textwidth = 0
 vim.opt.wrapmargin = 0
+vim.opt.conceallevel = 2

@@ -31,7 +31,7 @@ vim.opt.cursorline = true
 
 vim.opt.termguicolors = true
 vim.cmd([[
-  hi Cursor guibg=white
+  hi Cursor guibg=black
 ]])
 
 -- Use space characters instead of tabs.
