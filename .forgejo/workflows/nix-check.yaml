@@ -88,11 +88,9 @@ jobs:
           for h in $all_hosts; do
             case " $skip " in
               *" $h "*) skipped="$skipped $h" ;;
-              *) hosts="$hosts
-$h" ;;
+              *) hosts="${hosts:+$hosts$'\n'}$h" ;;
             esac
           done
-          hosts=$(echo "$hosts" | sed '/^$/d')
 
           host_count=$(echo "$hosts" | wc -l)
           echo "Found $host_count hosts to build"
