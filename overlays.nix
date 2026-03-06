@@ -24,6 +24,8 @@
         ((import ./overlays/claude-code.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/psycopg.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/llm.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        # tmux pinned to master for copy-mode crash fix (issue #4777)
+        ((import ./overlays/tmux.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         # tmux-fingers with stdin close fix (PR pending upstream)
         ((import ./overlays/tmux-fingers.nix {inherit config pkgs lib unstablePkgs;}) final prev)
 
