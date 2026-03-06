@@ -422,7 +422,9 @@
         function refresh {
           export $(tmux show-environment | grep "^SSH_AUTH_SOCK") > /dev/null
           export $(tmux show-environment | grep "^DISPLAY") > /dev/null
-          export $(tmux show-environment | grep "^KUBECONFIG") > /dev/null
+          if [[ "$KUBECONFIG_LOCAL" != "1" ]]; then
+            export $(tmux show-environment | grep "^KUBECONFIG") > /dev/null
+          fi
           export $(tmux show-environment | grep "^REMOTE_BROWSER_PORT") > /dev/null
         }
       else
