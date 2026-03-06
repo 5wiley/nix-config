@@ -23,16 +23,16 @@
   # FreshRSS - RSS feed aggregator
   # First NixOS container on the cluster (Phase 1.5)
   # Dependencies: PostgreSQL on nas-01 (network), agenix secrets
-  freshrss = {
-    type = "container";
-    deploy = "image";
-    configuration = "freshrss";
-    profile = "small";
-    storagePool = "local";
-    target = "nix-01";
-    network = {
-      mode = "bridged";
-      parent = "br0";
-    };
-  };
+  #   freshrss = {
+  #     type = "container";
+  #     deploy = "image";
+  #     configuration = "freshrss";
+  #     profile = "small";
+  #     storagePool = "local";
+  #     target = "nix-01";
+  #     network = {
+  #       mode = "bridged";
+  #       parent = "br0";
+  #     };
+  #   };
 }
