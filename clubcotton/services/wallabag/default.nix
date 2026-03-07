@@ -102,6 +102,7 @@ in {
         "${cfg.dataDir}/images:/var/www/wallabag/web/assets/images"
       ];
       ports = ["${toString cfg.port}:80"];
+      podman.sdnotify = "healthy";
     };
 
     systemd.tmpfiles.rules = [
