@@ -85,6 +85,7 @@ in {
         PGID = toString config.users.groups.share.gid;
       };
       ports = ["${toString cfg.port}:80"];
+      podman.sdnotify = "healthy";
     };
 
     systemd.tmpfiles.rules = [
