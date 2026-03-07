@@ -78,6 +78,11 @@
       url = "github:max-sixty/worktrunk";
     };
 
+    qmd = {
+      url = "github:tobi/qmd";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
     nix-ai-tools = {
       url = "github:numtide/nix-ai-tools";
       inputs.nixpkgs.follows = "nixpkgs-unstable";

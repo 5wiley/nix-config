@@ -9,6 +9,7 @@
   workmuxPackage,
   crushPackage,
   worktrunkPackage,
+  qmdPackage,
   inputs,
   ...
 }: {
@@ -684,6 +685,7 @@
         })
       crushPackage
       worktrunkPackage
+      qmdPackage
 
       procs
       unstablePkgs.sesh
