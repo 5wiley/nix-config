@@ -685,8 +685,11 @@
         })
       crushPackage
       worktrunkPackage
+    ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       qmdPackage
-
+    ]
+    ++ [
       procs
       unstablePkgs.sesh
       unstablePkgs.uv
