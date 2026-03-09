@@ -116,13 +116,18 @@ in {
         cfg.instances;
     };
 
-    # Override DynamicUser to use the static user declared above
+    # Override DynamicUser to use the static user declared above.
+    # The preStart fixes ownership on state dirs that were previously owned
+    # by a DynamicUser UID (one-time migration from DynamicUser=true).
     systemd.services = mapAttrs' (name: _:
       nameValuePair "gitea-runner-${name}" {
         serviceConfig = {
           DynamicUser = mkForce false;
           User = "gitea-runner";
           Group = "gitea-runner";
+          ExecStartPre = mkForce [
+            "+${pkgs.coreutils}/bin/chown -R gitea-runner:gitea-runner /var/lib/gitea-runner"
+          ];
         };
       })
     cfg.instances;
