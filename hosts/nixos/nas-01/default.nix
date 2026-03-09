@@ -473,6 +473,14 @@ in {
           cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/GLM-5-UD-IQ2_XXS-00001-of-00006.gguf -ngl 16 --split-mode layer --flash-attn on --no-webui";
           ttl = 600;
         };
+        "qwen3.5-35b-a3b-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 16384 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --no-webui";
+          ttl = 600;
+        };
+        "qwen3.5-35b-a3b-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 16384 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --no-webui";
+          ttl = 600;
+        };
       };
     };
   };
