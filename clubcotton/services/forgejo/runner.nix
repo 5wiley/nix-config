@@ -76,6 +76,16 @@ in {
     # Note: Docker/Podman should be configured at the host level
     # The runner will use the Docker-compatible socket provided by Podman
 
+    # Create static user/group so agenix can chown secrets at activation time.
+    # The upstream NixOS module uses DynamicUser which only creates the user at
+    # service runtime — too late for agenix secret ownership.
+    users.users.gitea-runner = {
+      isSystemUser = true;
+      group = "gitea-runner";
+      home = "/var/lib/gitea-runner";
+    };
+    users.groups.gitea-runner = {};
+
     # Configure each runner instance
     services.gitea-actions-runner = {
       package = pkgs.forgejo-runner;
@@ -105,6 +115,17 @@ in {
         })
         cfg.instances;
     };
+
+    # Override DynamicUser to use the static user declared above
+    systemd.services = mapAttrs' (name: _:
+      nameValuePair "gitea-runner-${name}" {
+        serviceConfig = {
+          DynamicUser = mkForce false;
+          User = "gitea-runner";
+          Group = "gitea-runner";
+        };
+      })
+    cfg.instances;
 
     # Open firewall if needed (runners initiate connections, usually not needed)
     # networking.firewall.allowedTCPPorts = [];
