@@ -186,6 +186,7 @@ in {
 
   environment.systemPackages = with pkgs; [
     beets
+    restic
     (unstablePkgs.llama-cpp.override {vulkanSupport = true;})
     vulkan-tools
     pciutils
