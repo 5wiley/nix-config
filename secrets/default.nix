@@ -31,16 +31,17 @@ in {
   };
 
   # Conditional secrets based on services
+  # alertmanager uses DynamicUser=true, so the user only exists while the
+  # service is running. We can't chown to it during activation. Use mode
+  # 0444 so the dynamic user can read the files at runtime.
   age.secrets."pushover-key" = lib.mkIf config.services.prometheus.alertmanager.enable {
     file = ./pushover-key.age;
-    owner = "alertmanager";
-    group = "alertmanager";
+    mode = "0444";
   };
 
   age.secrets."pushover-token" = lib.mkIf config.services.prometheus.alertmanager.enable {
     file = ./pushover-token.age;
-    owner = "alertmanager";
-    group = "alertmanager";
+    mode = "0444";
   };
 
   age.secrets."condo-ha-token" = lib.mkIf config.services.prometheus.enable {
