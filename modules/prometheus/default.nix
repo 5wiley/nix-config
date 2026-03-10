@@ -106,10 +106,26 @@ in {
           job_name = "llama-server";
           scrape_interval = "30s";
           scrape_timeout = "10s";
-          metrics_path = "/metrics";
           static_configs = [
             {
               targets = ["nas-01:8090"];
+              labels = {model = "qwen3.5-35b-a3b-coding";};
+            }
+            {
+              targets = ["nas-01:8090"];
+              labels = {model = "qwen3.5-35b-a3b-general";};
+            }
+            {
+              targets = ["nas-01:8090"];
+              labels = {model = "glm-5-ud-iq2_xxs";};
+            }
+          ];
+          relabel_configs = [
+            {
+              source_labels = ["model"];
+              target_label = "__metrics_path__";
+              regex = "(.+)";
+              replacement = "/upstream/$1/metrics";
             }
           ];
         }
