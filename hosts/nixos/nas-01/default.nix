@@ -467,7 +467,7 @@ in {
     llamaCppPackage = unstablePkgs.llama-cpp.override {vulkanSupport = true;};
     defaultModelArgs = "-ngl 99 --split-mode layer --flash-attn on --no-webui";
     settings = {
-      healthCheckTimeout = 300;
+      healthCheckTimeout = 1800;
       models = {
         "glm-5-ud-iq2_xxs" = {
           cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/GLM-5-UD-IQ2_XXS-00001-of-00006.gguf -ngl 16 --split-mode layer --flash-attn on --no-webui";
