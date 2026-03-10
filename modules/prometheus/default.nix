@@ -103,6 +103,17 @@ in {
           ];
         }
         {
+          job_name = "llama-server";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          static_configs = [
+            {
+              targets = ["nas-01:8090"];
+            }
+          ];
+        }
+        {
           job_name = "mimir";
           scrape_interval = "30s";
           scrape_timeout = "10s";
