@@ -181,6 +181,19 @@ with lib; let
       exit 1
     fi
 
+    ${optionalString (cfg.deferredRestartServices != []) ''
+      # Phase 5: Restart deferred services
+      # These services have restartIfChanged=false to avoid irreversible state
+      # changes during the test phase (e.g., Incus cluster DB schema upgrades).
+      echo ""
+      echo "=== Phase 5: Restarting deferred services ==="
+      ${concatMapStringsSep "\n" (svc: ''
+          echo "Restarting ${svc}.service..."
+          ${pkgs.systemd}/bin/systemctl restart ${svc}.service || echo "WARNING: Failed to restart ${svc}.service"
+        '')
+        cfg.deferredRestartServices}
+    ''}
+
     echo ""
     echo "=== Upgrade completed successfully at $(date) ==="
     ${optionalString (cfg.onSuccess != "") cfg.onSuccess}
@@ -281,6 +294,19 @@ in {
       type = types.bool;
       default = true;
       description = "Whether to automatically reboot on failed health checks to restore the previous generation.";
+    };
+
+    deferredRestartServices = mkOption {
+      type = types.listOf types.str;
+      default = [];
+      example = ["incus"];
+      description = ''
+        Systemd services to restart only after a successful nixos-rebuild switch.
+        Use this for services (like Incus) that make irreversible state changes
+        on startup (e.g., cluster DB schema upgrades). These services should have
+        restartIfChanged = false so they aren't restarted during the test phase.
+        After a successful switch, they are explicitly restarted here.
+      '';
     };
 
     onSuccess = mkOption {
