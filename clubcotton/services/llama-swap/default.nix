@@ -18,6 +18,58 @@ with lib; let
     else pkgs.llama-cpp;
   llama-server = lib.getExe' llama-cpp-pkg "llama-server";
 
+  metricsCollectorScript = pkgs.writeShellScript "llama-swap-metrics-collector" ''
+    set -euo pipefail
+
+    TEXTFILE_DIR="/var/lib/prometheus-node-exporter-text-files"
+    PROM_FILE="$TEXTFILE_DIR/llama_server.prom"
+    TMP_FILE="$PROM_FILE.tmp"
+    SWAP_URL="http://127.0.0.1:${toString cfg.port}"
+    CURL="${pkgs.curl}/bin/curl"
+    JQ="${pkgs.jq}/bin/jq"
+
+    mkdir -p "$TEXTFILE_DIR"
+
+    # Check which models are running
+    RUNNING=$($CURL -sf --max-time 3 "$SWAP_URL/running" 2>/dev/null || echo '{"running":[]}')
+    MODELS=$($JQ -r '.running[] | select(.state == "ready") | .model' <<< "$RUNNING")
+
+    if [ -z "$MODELS" ]; then
+      # No models loaded — clear metrics file
+      : > "$TMP_FILE"
+      chmod 644 "$TMP_FILE"
+      mv "$TMP_FILE" "$PROM_FILE"
+      exit 0
+    fi
+
+    # Fetch metrics from each running model and add model label
+    > "$TMP_FILE"
+    for MODEL in $MODELS; do
+      METRICS=$($CURL -sf --max-time 5 "$SWAP_URL/upstream/$MODEL/metrics" 2>/dev/null || true)
+      if [ -n "$METRICS" ]; then
+        # Add model label to each metric line (skip comments and empty lines)
+        echo "$METRICS" | while IFS= read -r line; do
+          if [[ "$line" =~ ^#\ TYPE ]]; then
+            echo "$line"
+          elif [[ "$line" =~ ^#\ HELP ]]; then
+            echo "$line"
+          elif [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
+            echo "$line"
+          elif [[ "$line" =~ ^([a-zA-Z_:][a-zA-Z0-9_:]*)\{(.*)\}\ (.+)$ ]]; then
+            echo "''${BASH_REMATCH[1]}{''${BASH_REMATCH[2]},model=\"$MODEL\"} ''${BASH_REMATCH[3]}"
+          elif [[ "$line" =~ ^([a-zA-Z_:][a-zA-Z0-9_:]*)\ (.+)$ ]]; then
+            echo "''${BASH_REMATCH[1]}{model=\"$MODEL\"} ''${BASH_REMATCH[2]}"
+          else
+            echo "$line"
+          fi
+        done >> "$TMP_FILE"
+      fi
+    done
+
+    chmod 644 "$TMP_FILE"
+    mv "$TMP_FILE" "$PROM_FILE"
+  '';
+
   discoveryScript = pkgs.writeShellScript "llama-swap-discover-models" ''
     set -euo pipefail
 
@@ -170,6 +222,29 @@ in {
         ExecStart = mkForce "${lib.getExe config.services.llama-swap.package} --listen :${toString cfg.port} --config /run/llama-swap/config.yaml";
       };
     };
+
+    # Metrics collector for Prometheus node-exporter textfile
+    systemd.services.llama-swap-metrics = {
+      description = "Collect llama-server metrics for Prometheus";
+      after = ["llama-swap.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = metricsCollectorScript;
+      };
+    };
+
+    systemd.timers.llama-swap-metrics = {
+      description = "Collect llama-server metrics periodically";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnCalendar = "*:0/1";
+        Persistent = true;
+      };
+    };
+
+    systemd.tmpfiles.rules = [
+      "d /var/lib/prometheus-node-exporter-text-files 0755 root root - -"
+    ];
 
     services.tsnsrv = mkIf (cfg.tailnetHostname != null && cfg.tailnetHostname != "") {
       enable = true;
