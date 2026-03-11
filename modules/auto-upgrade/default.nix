@@ -194,6 +194,12 @@ with lib; let
         cfg.deferredRestartServices}
     ''}
 
+    ${optionalString cfg.garbageCollect.enable ''
+      echo ""
+      echo "=== Post-upgrade: Garbage collecting generations older than ${cfg.garbageCollect.olderThan} ==="
+      ${config.nix.package}/bin/nix-collect-garbage --delete-older-than ${cfg.garbageCollect.olderThan} || echo "WARNING: Garbage collection failed (non-fatal)"
+    ''}
+
     echo ""
     echo "=== Upgrade completed successfully at $(date) ==="
     ${optionalString (cfg.onSuccess != "") cfg.onSuccess}
@@ -307,6 +313,20 @@ in {
         restartIfChanged = false so they aren't restarted during the test phase.
         After a successful switch, they are explicitly restarted here.
       '';
+    };
+
+    garbageCollect = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Run nix garbage collection after a successful upgrade to reclaim disk space.";
+      };
+
+      olderThan = mkOption {
+        type = types.str;
+        default = "7d";
+        description = "Delete generations older than this threshold (e.g., 7d, 14d, 30d).";
+      };
     };
 
     onSuccess = mkOption {

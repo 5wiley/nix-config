@@ -43,7 +43,7 @@ in {
     auto-upgrade = {
       enable = true;
       flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
-      dates = "03:30";
+      dates = "04:00";
       healthChecks = {
         pingTargets = ["192.168.5.1" "192.168.5.220"];
         services = ["sshd" "tailscaled" "postgresql" "forgejo"];
@@ -51,10 +51,7 @@ in {
           {port = 22;}
           {port = 3000;}
         ];
-        extraScript = ''
-          if incus cluster list --format csv | grep -qv ONLINE; then echo "incus: member not ONLINE"; exit 1; fi
-        '';
-        extraScriptPackages = [pkgs.incus pkgs.jq];
+        extraScriptPackages = [pkgs.jq];
       };
       onSuccess = let
         curl = "${pkgs.curl}/bin/curl";

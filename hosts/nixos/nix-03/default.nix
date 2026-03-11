@@ -34,17 +34,13 @@ in {
     auto-upgrade = {
       enable = true;
       flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
-      dates = "03:00";
+      dates = "02:30";
       healthChecks = {
         pingTargets = ["192.168.5.1" "192.168.5.220"];
         services = ["sshd" "tailscaled"];
         tcpPorts = [
           {port = 22;}
         ];
-        extraScript = ''
-          if incus cluster list --format csv | grep -qv ONLINE; then echo "incus: member not ONLINE"; exit 1; fi
-        '';
-        extraScriptPackages = [pkgs.incus];
       };
     };
     forgejo-runner = {

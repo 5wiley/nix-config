@@ -51,10 +51,6 @@ in {
         tcpPorts = [
           {port = 22;}
         ];
-        extraScript = ''
-          if incus cluster list --format csv | grep -qv ONLINE; then echo "incus: member not ONLINE"; exit 1; fi
-        '';
-        extraScriptPackages = [pkgs.incus];
       };
     };
     forgejo-runner = {
