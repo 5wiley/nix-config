@@ -460,6 +460,32 @@ groups:
     annotations:
       description: 'Nix cache proxy on {{ $labels.instance }} is nearly full at {{ printf "%.1f" $value }}% capacity - nginx may fail to cache new packages'
 
+  # Generic Host Filesystem Monitoring (all hosts)
+  # Excludes tmpfs, overlay, nsfs, and other virtual filesystems
+  - alert: HostFilesystemSpaceLow
+    expr: |
+      (
+        (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs|fuse.lxcfs"} / node_filesystem_size_bytes) * 100 < 15
+        and node_filesystem_size_bytes > 1e9
+      ) * on(instance) group_left(nodename) node_uname_info{nodename=~".+"}
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Filesystem {{ $labels.mountpoint }} on {{ $labels.nodename }} ({{ $labels.instance }}) has only {{ printf "%.1f" $value }}% free space'
+
+  - alert: HostFilesystemSpaceCritical
+    expr: |
+      (
+        (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs|fuse.lxcfs"} / node_filesystem_size_bytes) * 100 < 5
+        and node_filesystem_size_bytes > 1e9
+      ) * on(instance) group_left(nodename) node_uname_info{nodename=~".+"}
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: 'Filesystem {{ $labels.mountpoint }} on {{ $labels.nodename }} ({{ $labels.instance }}) has only {{ printf "%.1f" $value }}% free space — action needed immediately'
+
   # Nix Build and Cache Infrastructure Monitoring
   - alert: NixCacheNotAccessible
     expr: nix_cache_info_accessible == 0

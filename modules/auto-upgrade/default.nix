@@ -118,12 +118,21 @@ with lib; let
     echo "Host: $HOSTNAME"
     echo "Flake: $FLAKE"
 
+    ${optionalString cfg.garbageCollect.enable ''
+      # Pre-build GC: reclaim space before building to prevent disk-full doom loops.
+      # A failed build can leave partial store paths that fill the disk, and post-upgrade
+      # GC only runs on success — so without pre-build GC, the disk stays full forever.
+      echo ""
+      echo "=== Pre-build: Garbage collecting generations older than ${cfg.garbageCollect.olderThan} ==="
+      ${config.nix.package}/bin/nix-collect-garbage --delete-older-than ${cfg.garbageCollect.olderThan} || echo "WARNING: Pre-build garbage collection failed (non-fatal)"
+    ''}
+
     # Phase 1: Build the new configuration
     echo ""
     echo "=== Phase 1: Building new configuration ==="
     if ! ${config.nix.package}/bin/nix build \
         "''${FLAKE}#nixosConfigurations.''${HOSTNAME}.config.system.build.toplevel" \
-        --refresh --no-link --print-out-paths; then
+        --refresh --no-link --print-out-paths --fallback; then
       echo "FATAL: Build failed. Aborting upgrade."
       ${optionalString (cfg.onFailure != "") cfg.onFailure}
       exit 1
