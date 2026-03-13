@@ -840,7 +840,7 @@ groups:
       severity: warning
     annotations:
       summary: "No logs from {{ $labels.hostname }}"
-      description: "Host {{ $labels.hostname }} has not sent any logs to Loki in the last hour. Check alloy-logs.service on the host."
+      description: "Host {{ $labels.hostname }} has not sent any logs to Loki in the last hour. Check alloy.service on the host."
 
   # Grafana Tempo Monitoring
   - alert: TempoDown

@@ -9,6 +9,7 @@
   inputs,
   hostName,
   hostSpec,
+  nixosHostSpecs,
   ...
 }: let
   keys = import ../../common/keys.nix;
@@ -176,7 +177,9 @@ in {
   services.loki-host-monitor = {
     enable = true;
     lokiUrl = "http://localhost:3100";
-    expectedHosts = ["admin" "dns-01" "imac-01" "nas-01" "nix-01" "nix-02" "nix-03" "octoprint"];
+    expectedHosts = builtins.attrNames (
+      lib.filterAttrs (_: spec: spec.shouldMonitor or true) nixosHostSpecs
+    );
   };
 
   environment.systemPackages = with pkgs; [

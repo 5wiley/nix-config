@@ -35,6 +35,23 @@ with lib; let
       echo "loki_host_log_lines_1h{hostname=\"$host\"} $count" >> "$TMP_FILE"
     done
 
+    # Error count per host (syslog priority err/crit/alert/emerg)
+    cat >> "$TMP_FILE" <<'HEADER2'
+    # HELP loki_host_error_lines_1h Number of error-priority log lines from host in the last hour
+    # TYPE loki_host_error_lines_1h gauge
+    HEADER2
+
+    for host in ${concatStringsSep " " cfg.expectedHosts}; do
+      error_count=$(${pkgs.curl}/bin/curl -sG "$LOKI_URL/loki/api/v1/query" \
+        --data-urlencode "query=count_over_time({job=\"systemd-journal\", hostname=\"$host\", priority=~\"err|crit|alert|emerg\"}[1h])" \
+        --data-urlencode "time=$(${pkgs.coreutils}/bin/date +%s)" \
+        --max-time 10 2>/dev/null \
+        | ${pkgs.jq}/bin/jq '[.data.result[].value[1] | tonumber] | add // 0' 2>/dev/null \
+        || echo 0)
+
+      echo "loki_host_error_lines_1h{hostname=\"$host\"} $error_count" >> "$TMP_FILE"
+    done
+
     # Atomic rename so Prometheus never reads a partial file
     mv "$TMP_FILE" "$PROM_FILE"
   '';

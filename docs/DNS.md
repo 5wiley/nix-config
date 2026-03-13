@@ -144,11 +144,13 @@ Enabled on nas-01 (where Loki runs):
 services.loki-host-monitor = {
   enable = true;
   lokiUrl = "http://localhost:3100";
-  expectedHosts = ["admin" "dns-01" "imac-01" "nas-01" "nix-01" "nix-02" "nix-03" "octoprint"];
+  expectedHosts = builtins.attrNames (
+    lib.filterAttrs (_: spec: spec.shouldMonitor or true) nixosHostSpecs
+  );
 };
 ```
 
-When adding or removing hosts from the fleet, update the `expectedHosts` list.
+The `expectedHosts` list is derived automatically from `nixosHostSpecs` — hosts are included when `shouldMonitor` is true (the default). No manual updates needed when adding/removing hosts.
 
 ## Troubleshooting
 
@@ -188,7 +190,7 @@ journalctl -u alloy.service --since "1 hour ago" | grep -i "misbehaving\|error\|
 ### HostLogsMissing Alert Firing
 
 1. SSH to the affected host
-2. Check `alloy-logs.service`: `systemctl status alloy-logs.service`
+2. Check Alloy: `systemctl status alloy.service`
 3. Check DNS resolution: `dig nas-01.lan +short`
 4. Check Loki reachability: `curl -sf http://nas-01.lan:3100/ready`
 

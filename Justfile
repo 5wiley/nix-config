@@ -183,6 +183,14 @@ ci-analyze *args="":
 issue-check-fixed *args="":
   ./scripts/issue-check-fixed.sh {{args}}
 
+# Query Loki logs from the command line
+loki-query *args="":
+  ./scripts/loki-query.sh {{args}}
+
+# Run infrastructure report queries and output JSON
+infra-report-data *args="":
+  ./scripts/infra-report.sh {{args}}
+
 # Download a GGUF model from Hugging Face to nas-01
 # Usage: just download-model bartowski/Meta-Llama-3.1-8B-Instruct-GGUF Q4_K_M
 #        just download-model bartowski/Qwen2.5-72B-Instruct-GGUF Q4_K_M --dry-run

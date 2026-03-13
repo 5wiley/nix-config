@@ -22,6 +22,7 @@ Resolve hostnames and IPs from the NixOS fleet configuration.
   $(basename "$0") octoprint        Look up by hostname
   $(basename "$0") dns              Partial match on hostname
   $(basename "$0") --list           Show all hosts
+  $(basename "$0") --log-hosts      List hosts expected to send logs
 
 Output format: hostname (displayName) - ip
 EOF
@@ -107,6 +108,14 @@ do_lookup() {
 
 if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" ]]; then
   usage
+  exit 0
+fi
+
+if [[ "$1" == "--log-hosts" ]]; then
+  FLAKE_DIR="${SCRIPT_DIR}/.."
+  nix eval --json "${FLAKE_DIR}#nixosHostSpecs" 2>/dev/null \
+    | jq -r 'to_entries[] | select(.value.shouldScrapeMetrics == true or .value.shouldScrapeMetrics == null) | .key' \
+    | sort
   exit 0
 fi
 

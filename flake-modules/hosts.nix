@@ -488,5 +488,8 @@
           }
       )
       nixosHostSpecs;
+
+    # Expose host specs for CLI tooling (nix eval .#nixosHostSpecs)
+    inherit nixosHostSpecs;
   };
 }

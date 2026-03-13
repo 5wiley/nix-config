@@ -1,7 +1,7 @@
 ---
 name: infra-report
 description: Generate an infrastructure health report from Loki logs. Use when asked to check logs and create a report, generate a health report, summarize infrastructure status, or do a log review.
-allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/*)
+allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/*), Bash(ssh *)
 argument-hint: time window (e.g., 'last 12 hours', 'last 24 hours', 'last 7 days')
 ---
 
@@ -48,6 +48,18 @@ Parse the user's requested time window. Default to 24 hours. Examples:
 
 Use the variable `WINDOW` for the LogQL range (e.g., `[24h]`, `[12h]`, `[7d]`).
 
+## Quick Start (Automated)
+
+Run all queries in parallel and get a combined JSON dataset:
+
+```bash
+./scripts/infra-report.sh --since=24h
+```
+
+The JSON output contains all query results keyed by section (`hosts_reporting`, `error_counts`, `auto_upgrades`, etc.) plus a `meta` object with `expected_hosts` and `generated_at`. Use this to analyze results rather than running queries individually.
+
+For manual investigation or follow-up on specific areas, use the individual queries below or `./scripts/loki-query.sh` directly.
+
 ## Queries to Run
 
 Run these in parallel where possible. Use `$PERIOD` for `--data-urlencode "start=..."` and `$WINDOW` for LogQL range selectors.
@@ -60,7 +72,10 @@ count by (hostname) (count_over_time({job="systemd-journal"}[1h]))
 
 Format: list of hostnames. Flag any expected host NOT reporting.
 
-Expected hosts: admin, dns-01, imac-01, imac-02, nas-01, nix-01, nix-02, nix-03
+Expected hosts (derive dynamically — do not hardcode):
+```bash
+./scripts/host-lookup.sh --log-hosts
+```
 
 ### 2. Error Counts by Host
 
@@ -109,6 +124,8 @@ Then sample the top offenders (limit 5 each) to classify as genuine vs noisy:
 - `garage.service`: "error 404 Not Found, Key not found" (normal S3 cache misses, logged at INFO level)
 - `podman-pinchflat.service`: SQL queries containing column name "last_error" (false positive)
 - `navidrome.service`: Subsonic API scanner warnings
+- `borgmatic.service` / `restic-backups-*.service`: Scrape target timeouts or transient errors (normal when backups are not actively running — these services are periodic, not persistent)
+- `prometheus-smartctl-exporter.service`: Transient "open: permission denied" on devices being scanned (timing issue during device enumeration, not a failure)
 
 **Potentially significant text-level errors to flag:**
 - `prometheus-smartctl-exporter.service`: SMART command failures (may indicate failing disk)
@@ -229,6 +246,42 @@ This returns all currently firing alerts. Cross-reference with findings from the
 
 Include firing alerts (excluding Watchdog) in the report under a **Prometheus Alerts** section, before the Errors section. For each alert, show: alert name, instance, severity, and how long it's been firing.
 
+### 16. Disk / Nix Store Usage
+
+Query Prometheus for filesystem usage across all hosts:
+
+```bash
+curl -sG http://admin:9001/api/v1/query \
+  --data-urlencode 'query=100 - ((node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs"}) * 100)' \
+  --data-urlencode "time=$(date +%s)" \
+  | jq -r '.data.result[] | "\(.metric.instance) \(.metric.mountpoint): \(.value[1] | tonumber | . * 10 | round / 10)% used"'
+```
+
+Flag any filesystem above 80% usage. Pay special attention to `/nix/store` and `/` on small-disk hosts (dns-01, admin).
+
+### 17. Auto-Upgrade Duration
+
+Extract start and completion timestamps from auto-upgrade logs to compute duration per host:
+
+```logql
+{unit="auto-upgrade.service"} |~ "Auto-upgrade started|completed successfully|FATAL"
+```
+
+Parse the timestamps to calculate duration. Flag upgrades taking >30 minutes — they may indicate build issues or slow downloads.
+
+### 18. Loki Error Rate (from Prometheus)
+
+Query the `loki_host_error_lines_1h` metric exposed by the loki-host-monitor textfile collector:
+
+```bash
+curl -sG http://admin:9001/api/v1/query \
+  --data-urlencode 'query=loki_host_error_lines_1h' \
+  --data-urlencode "time=$(date +%s)" \
+  | jq -r '.data.result[] | "\(.metric.hostname): \(.value[1]) errors/hr"'
+```
+
+This provides a quick snapshot without querying Loki directly. Compare with error counts from query 2 for consistency.
+
 ## Report Format
 
 Present findings as a structured report with these sections:
@@ -270,6 +323,11 @@ If no alerts are firing (besides Watchdog), note "No active alerts."
 |------|-------|---------|
 Only hosts with errors. Note if errors are cosmetic/expected.
 
+### Disk Usage
+| Host | Mountpoint | Used % | Notes |
+|------|------------|--------|-------|
+Only filesystems above 70%. Bold **>90%** entries.
+
 ### Other Checks
 Bullet list of categories checked with "None" or brief findings:
 - Prometheus alerts (firing, excluding Watchdog)
@@ -283,6 +341,14 @@ Bullet list of categories checked with "None" or brief findings:
 - Service failures
 - Forgejo log scraper errors
 - Forgejo CI failures
+- Auto-upgrade durations (flag >30 min)
+- Loki error rate per host
+
+### Changes Since Last Report
+Compare with the previous report (see Report Diffing below):
+- **New**: Issues not present in previous report
+- **Resolved**: Issues from previous report no longer appearing
+- **Recurring**: Same issues persisting across reports
 
 ### Action Items
 Numbered list of things that need attention, ordered by severity.
@@ -403,3 +469,50 @@ After presenting the report to the user and filing any action item bugs, publish
 - Reports are kept open by default as a browsable daily log
 - Old reports can be bulk-closed periodically: `./scripts/forgejo.sh issue list --label=report` then close as needed
 - The `report` label (blue, #0075ca) distinguishes these from bug issues in the issue tracker
+
+## Report Diffing (Comparison with Previous Report)
+
+After generating the current report, fetch the most recent previous report to identify trends.
+
+### Fetch Previous Report
+
+```bash
+# Get the most recent report issues
+./scripts/forgejo.sh issue list --label=report --limit=3
+```
+
+Pick the most recent report that is NOT today's date. Fetch its body via the Forgejo API:
+
+```bash
+# Resolve Forgejo config for API access
+source ./scripts/lib/common.sh
+resolve_forgejo_config
+
+# Fetch the previous report body (replace NNN with issue number)
+curl -sf -H "Authorization: token $TOKEN" \
+  "${BASE_URL}/api/v1/repos/${REPO}/issues/NNN" | jq -r '.body'
+```
+
+### Comparison Points
+
+When comparing with the previous report:
+1. **New issues**: Errors/failures not present in previous report
+2. **Resolved issues**: Problems from previous report no longer appearing
+3. **Recurring issues**: Same errors persisting across reports (flag for investigation)
+4. **Trend changes**: Error counts going up or down significantly
+
+Include findings in the **Changes Since Last Report** section of the report output.
+
+## SSH Access for Live Investigation
+
+For deeper investigation of flagged issues, SSH into hosts:
+
+```bash
+ssh -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 bcotton@<hostname>.lan "<command>"
+```
+
+Useful for checking:
+- `systemctl status <service>` — current service state
+- `journalctl -u <service> --since '1 hour ago'` — recent logs not yet in Loki
+- `df -h /nix/store` — current disk usage
+- `nixos-rebuild list-generations | tail -5` — recent generations
