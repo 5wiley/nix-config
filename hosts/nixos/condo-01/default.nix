@@ -10,11 +10,9 @@
   lib,
   unstablePkgs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -50,8 +48,8 @@ in {
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
-  services.openssh.enable = variables.opensshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
   services.clubcotton.tailscale = {
     useRoutingFeatures = "server";
@@ -82,7 +80,7 @@ in {
   };
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = "condo-01";
     defaultGateway = "192.168.12.1";
     nameservers = ["192.168.12.1"];
@@ -96,7 +94,7 @@ in {
     #  }
     #];
   };
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.pipewire = {
     enable = true;
@@ -146,7 +144,7 @@ in {
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [8096 8112];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

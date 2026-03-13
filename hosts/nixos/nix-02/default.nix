@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -130,7 +128,7 @@ in {
   systemd.services."user@".serviceConfig.Delegate = "cpu cpuset io memory pids";
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = hostName;
   };
 
@@ -157,16 +155,16 @@ in {
     };
   };
 
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
   # TODO
-  networking.firewall.enable = variables.firewallEnable;
-  system.stateVersion = variables.stateVersion;
+  networking.firewall.enable = hostSpec.firewallEnable;
+  system.stateVersion = hostSpec.stateVersion;
 }

@@ -5,13 +5,9 @@
   inputs,
   lib,
   localPackages,
-  hostName,
+  hostSpec,
   ...
-}: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ./lib.nix;
-  variables = commonLib.getHostVariables hostName;
-in {
+}: {
   config = {
     system.stateVersion = 5;
 
@@ -37,9 +33,9 @@ in {
     };
 
     # Linux builder for building Linux packages on macOS
-    # Enable per-host via variables.nix: linuxBuilderEnable = true;
-    nix.linux-builder.enable = variables.linuxBuilderEnable;
-    nix.settings.system-features = lib.mkIf variables.linuxBuilderEnable [
+    # Enable per-host via hostSpec: linuxBuilderEnable = true;
+    nix.linux-builder.enable = hostSpec.linuxBuilderEnable;
+    nix.settings.system-features = lib.mkIf hostSpec.linuxBuilderEnable [
       "nixos-test"
       "apple-virt"
     ];

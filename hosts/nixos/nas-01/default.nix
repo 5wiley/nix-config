@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -339,7 +337,7 @@ in {
   services.rpcbind.enable = true;
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.clubcotton.pinchflat = {
     mediaDir = "/media/youtube/pinchflat";
@@ -617,7 +615,7 @@ in {
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
@@ -644,12 +642,12 @@ in {
   '';
 
   networking.firewall = {
-    enable = variables.firewallEnable;
+    enable = hostSpec.firewallEnable;
     # CUPS printing, NFS, rpcbind
     allowedTCPPorts = [631 2049 111];
     allowedUDPPorts = [631];
   };
-  networking.hostId = variables.hostId;
+  networking.hostId = hostSpec.hostId;
 
   # CUPS PDF service for paperless consumption
   services.printing = {
@@ -1013,5 +1011,5 @@ in {
     cacheUrl = "http://nas-01.lan:80";
   };
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

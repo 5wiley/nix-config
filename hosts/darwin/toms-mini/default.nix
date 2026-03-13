@@ -5,13 +5,9 @@
   unstablePkgs,
   lib,
   inputs,
-  hostName,
+  hostSpec,
   ...
-}: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
-in {
+}: {
   imports = [../toms-darwin/default.nix];
 
   services.clubcotton.toms-darwin = {

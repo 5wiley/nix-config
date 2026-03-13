@@ -1,8 +1,8 @@
 # Library of functions for generating Prometheus scrape configurations
-{lib}: let
-  # Import host variables library for reading per-host settings
-  commonLib = import ../../hosts/common/lib.nix;
-
+{
+  lib,
+  nixosHostSpecs,
+}: let
   # Common domain suffix for tailscale services
   tailscaleDomain = ".bobtail-clownfish.ts.net";
 
@@ -28,8 +28,7 @@
   # Returns: Attribute set of enabled exporters and their configurations
   #          Returns empty set if shouldScrapeMetrics is false for the host
   enabledExportersF = hostName: host: let
-    variables = commonLib.getHostVariables hostName;
-    shouldScrape = variables.shouldScrapeMetrics or true;
+    shouldScrape = (nixosHostSpecs.${hostName} or {}).shouldScrapeMetrics or true;
     exporters = host.config.services.prometheus.exporters;
     mkExporter = name:
       if
@@ -78,8 +77,7 @@
   # Returns: Boolean indicating if tailscale is enabled
   #          Returns false if shouldScrapeMetrics is false for the host
   enabledTailscaleF = hostName: host: let
-    variables = commonLib.getHostVariables hostName;
-    shouldScrape = variables.shouldScrapeMetrics or true;
+    shouldScrape = (nixosHostSpecs.${hostName} or {}).shouldScrapeMetrics or true;
   in
     if shouldScrape && (host.config.services.clubcotton.services.tailscale.enable or false)
     then true

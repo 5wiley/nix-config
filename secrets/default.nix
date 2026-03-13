@@ -2,11 +2,10 @@
   config,
   lib,
   hostName,
+  hostSpec,
   ...
 }: let
-  commonLib = import ../hosts/common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
-  isBotHost = builtins.elem hostName (variables.botHosts or []);
+  isBotHost = builtins.elem hostName (hostSpec.botHosts or []);
 in {
   # Generate postgres secrets here: https://supercaracal.github.io/scram-sha-256/
 

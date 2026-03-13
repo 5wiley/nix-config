@@ -3,10 +3,11 @@
   pkgs,
   self,
   lib,
+  nixosHostSpecs,
   ...
 }: let
   # Import the prometheus configuration library
-  promLib = import ./lib.nix {lib = pkgs.lib;};
+  promLib = import ./lib.nix {inherit lib nixosHostSpecs;};
   # Get all scrape configurations
   scrapeConfigs = promLib.mkScrapeConfigs self (config.services.prometheus.tsnsrvExcludeList or []);
 in {
