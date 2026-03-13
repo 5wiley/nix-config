@@ -59,6 +59,7 @@ in {
       # (03:00 + 15min jitter, nas-01 at 03:30) must finish before this runs.
       dates = "04:00";
       randomizedDelaySec = "0";
+      garbageCollect.olderThan = "3d";
       healthChecks = {
         pingTargets = ["192.168.5.1"];
         services = ["sshd"];
@@ -535,6 +536,7 @@ in {
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = "dns-01";

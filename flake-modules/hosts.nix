@@ -122,42 +122,49 @@
           usernames = ["bcotton" "tomcotton"];
           ip = "192.168.5.42";
           displayName = "NAS-01";
+          desktopPackages = true;
         };
         nix-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
           ip = "192.168.5.210";
           displayName = "Nix-01";
+          desktopPackages = true;
         };
         nix-02 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
           ip = "192.168.5.212";
           displayName = "Nix-02";
+          desktopPackages = true;
         };
         nix-03 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
           ip = "192.168.5.214";
           displayName = "Nix-03";
+          desktopPackages = true;
         };
         nix-04 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
           ip = "192.168.5.54";
           displayName = "Nix-04";
+          desktopPackages = true;
         };
         imac-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
           ip = "192.168.5.125";
           displayName = "iMac-01";
+          desktopPackages = true;
         };
         imac-02 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
           ip = "192.168.5.153";
           displayName = "iMac-02";
+          desktopPackages = true;
         };
         dns-01 = {
           system = "x86_64-linux";
@@ -283,6 +290,7 @@
       hostName,
       usernames,
       minimal ? false, # Toggle for minimal vs full
+      desktopPackages ? false, # Include heavy desktop/media packages
     }: let
       pkgs = genPkgs system;
       unstablePkgs = genUnstablePkgs system;
@@ -309,6 +317,13 @@
         ++ [
           ../hosts/common/common-packages.nix
           ../hosts/common/nixos-common.nix
+        ]
+        ++ (
+          if desktopPackages
+          then [../hosts/common/nixos-desktop-packages.nix]
+          else []
+        )
+        ++ [
           # Enable tailscale from variables
           ({hostName, ...}: let
             commonLib = import ../hosts/common/lib.nix;
@@ -425,6 +440,7 @@
           nixosSystem {
             inherit hostName;
             inherit (spec) system usernames;
+            desktopPackages = spec.desktopPackages or false;
           }
       )
       nixosHostSpecs;

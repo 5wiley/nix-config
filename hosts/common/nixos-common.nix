@@ -13,6 +13,9 @@ in {
     settings = {
       experimental-features = ["nix-command" "flakes"];
       warn-dirty = false;
+      # Auto-GC unreferenced store paths mid-build when free space drops below 5 GB
+      min-free = toString (5 * 1024 * 1024 * 1024);
+      max-free = toString (10 * 1024 * 1024 * 1024);
     };
     # Automate garbage collection
     gc = {
@@ -34,21 +37,12 @@ in {
 
   environment.systemPackages = with pkgs; [
     inputs.isd.packages."${system}".default
-    alsa-utils
-    # intel-gpu-tools
-    libva-utils
     file
-    # intel-media-driveupr
-    jellyfin-ffmpeg
     hddtemp
     nil
     nixos-shell
     nodejs_22
     pnpm_10
-    synergy
-    qemu
-    quickemu
-    inputs.ghostty.packages."${system}".default
     zstd
   ];
 

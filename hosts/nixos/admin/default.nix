@@ -44,6 +44,7 @@ in {
       enable = true;
       flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
       dates = "03:00";
+      garbageCollect.olderThan = "3d";
       healthChecks = {
         pingTargets = ["192.168.5.1" "192.168.5.220"];
         services = ["sshd" "tailscaled"];
@@ -109,7 +110,7 @@ in {
   };
 
   boot.loader.systemd-boot.enable = true;
-  boot.loader.systemd-boot.configurationLimit = 20;
+  boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.systemd-boot.memtest86.enable = true;
   boot.loader.systemd-boot.netbootxyz.enable = true;
 
