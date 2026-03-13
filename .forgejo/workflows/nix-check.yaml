@@ -56,6 +56,7 @@ jobs:
 
   build-hosts:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     container:
       image: forgejo.bobtail-clownfish.ts.net/bcotton/nix-ci-runner:a0ddfa0
       options: --user root

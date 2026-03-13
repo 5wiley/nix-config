@@ -101,7 +101,7 @@ in {
           settings = {
             runner = {
               capacity = runnerCfg.capacity;
-              timeout = "3h";
+              timeout = "6h";
             };
             cache = {
               enabled = true;
