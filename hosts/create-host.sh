@@ -38,40 +38,38 @@ if [ "$TYPE" = "nixos" ]; then
   config,
   pkgs,
   lib,
-  hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
+  keys = import ../../common/keys.nix;
 in {
   imports = [
     # Include the results of the hardware scan.
     # Run: nixos-generate-config --show-hardware-config > hardware-configuration.nix
     ./hardware-configuration.nix
-    
+
     # Add your module imports here
     # ../../../modules/some-module
   ];
 
-  # Networking
-  networking.hostName = hostName;
-  networking.useDHCP = variables.useDHCP;
-  
   # System configuration
-  time.timeZone = variables.timeZone;
-  programs.zsh.enable = variables.zshEnable;
-  
-  # Services (tailscale is enabled by default via common config)
-  services.openssh.enable = variables.opensshEnable;
-  networking.firewall.enable = variables.firewallEnable;
-  
+  time.timeZone = hostSpec.timeZone;
+  programs.zsh.enable = hostSpec.zshEnable;
+
+  # Services (tailscale is enabled by default via hostSpec)
+  services.openssh.enable = hostSpec.opensshEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
+
   # Boot loader configuration
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  
-  # Don't change this value
-  system.stateVersion = "23.11";
+
+  users.users.root = {
+    openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
+  };
+
+  # stateVersion is set via hostSpec in nixosHostSpecs
+  system.stateVersion = hostSpec.stateVersion;
 }
 EOF
 else
@@ -80,63 +78,48 @@ else
   config,
   pkgs,
   lib,
-  hostName,
+  hostSpec,
   ...
-}: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
-in {
+}: {
   imports = [
     # Add your module imports here
   ];
 
-  # Networking
-  networking.hostName = hostName;
-  
-  # System configuration
-  time.timeZone = variables.timeZone;
-  programs.zsh.enable = variables.zshEnable;
-  
-  # Services
-  # Darwin-specific services go here
-  
-  # Don't change this value
-  system.stateVersion = 4;
+  config = {
+    system.primaryUser = hostSpec.primaryUser;
+    users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
+
+    # Darwin-specific services go here
+
+    system.stateVersion = 4;
+  };
 }
 EOF
 fi
 
-echo "✅ Host directory created at: $HOST_DIR"
-echo ""
-echo "All hosts use defaults from hosts/common/variables.nix"
+echo "Host directory created at: $HOST_DIR"
 echo ""
 echo "Next steps:"
-echo "1. (Optional) Create $HOST_DIR/variables.nix to override any defaults:"
-echo "   {"
-echo "     timeZone = \"America/New_York\";"
-echo "     firewallEnable = true;"
-echo "   }"
+echo "1. Add your host to nixosHostSpecs in flake-modules/hosts.nix:"
+if [ "$TYPE" = "nixos" ]; then
+    echo "   $HOSTNAME = {"
+    echo "     system = \"x86_64-linux\";"
+    echo "     usernames = [\"username\"];"
+    echo "     stateVersion = \"25.05\";"
+    echo "     # ip = \"192.168.x.x\";  # Optional: for homepage/monitoring"
+    echo "   };"
+else
+    echo "   Add to darwinConfigurations:"
+    echo "   $HOSTNAME = darwinSystem {"
+    echo "     system = \"aarch64-darwin\";"
+    echo "     hostName = \"$HOSTNAME\";"
+    echo "     username = \"username\";"
+    echo "   };"
+fi
 echo ""
 echo "2. Edit $HOST_DIR/default.nix to add host-specific configuration"
 if [ "$TYPE" = "nixos" ]; then
     echo "3. Generate hardware config: nixos-generate-config --show-hardware-config > $HOST_DIR/hardware-configuration.nix"
 fi
 echo ""
-echo "4. Add your host to flake.nix:"
-if [ "$TYPE" = "nixos" ]; then
-    echo "   nixosConfigurations = {"
-    echo "     $HOSTNAME = nixosSystem \"x86_64-linux\" \"$HOSTNAME\" [\"username\"];"
-    echo "     # ..."
-    echo "   };"
-else
-    echo "   darwinConfigurations = {"
-    echo "     $HOSTNAME = darwinSystem \"aarch64-darwin\" \"$HOSTNAME\" \"username\";"
-    echo "     # ..."
-    echo "   };"
-fi
-echo ""
-echo "5. Build: nixos-rebuild switch --flake .#$HOSTNAME"
-echo ""
-echo "Note: If you don't create variables.nix, all defaults will be used!"
-
+echo "4. Build: nixos-rebuild switch --flake .#$HOSTNAME"

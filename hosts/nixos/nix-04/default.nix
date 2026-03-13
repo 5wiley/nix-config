@@ -10,11 +10,9 @@
   lib,
   unstablePkgs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -40,8 +38,8 @@ in {
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
-  services.openssh.enable = variables.opensshEnable; # Enable the OpenSSH daemon.
+  programs.zsh.enable = hostSpec.zshEnable;
+  services.openssh.enable = hostSpec.opensshEnable; # Enable the OpenSSH daemon.
 
   services.clubcotton.freshrss = {
     port = 8104;
@@ -81,7 +79,7 @@ in {
   };
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = "nix-04";
     defaultGateway = "192.168.12.1";
     nameservers = ["192.168.12.1"];
@@ -101,7 +99,7 @@ in {
   # networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
@@ -110,7 +108,7 @@ in {
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
@@ -133,5 +131,5 @@ in {
   # and migrated your data accordingly.
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

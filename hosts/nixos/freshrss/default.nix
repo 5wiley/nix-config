@@ -13,11 +13,9 @@
   pkgs,
   lib,
   hostName,
+  hostSpec,
   ...
-}: let
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
-in {
+}: {
   imports = [
     ./hardware-configuration.nix
   ];
@@ -46,5 +44,5 @@ in {
   # Enable SSH for management (agenix key retrieval, debugging)
   services.openssh.enable = true;
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

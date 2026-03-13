@@ -3,10 +3,9 @@
   pkgs,
   lib,
   hostName,
+  hostSpec,
   ...
 }: let
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -62,14 +61,14 @@ in {
     hostName = hostName;
   };
 
-  time.timeZone = variables.timeZone;
-  programs.zsh.enable = variables.zshEnable;
+  time.timeZone = hostSpec.timeZone;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
-  services.openssh.enable = variables.opensshEnable;
-  networking.firewall.enable = variables.firewallEnable;
-  system.stateVersion = variables.stateVersion;
+  services.openssh.enable = hostSpec.opensshEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
+  system.stateVersion = hostSpec.stateVersion;
 }

@@ -4,19 +4,16 @@
   unstablePkgs,
   lib,
   inputs,
-  hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in {
   config = {
     ids.uids.nixbld = 300;
 
-    system.primaryUser = variables.primaryUser;
-    users.users.${variables.primaryUser}.home = "/Users/${variables.primaryUser}";
+    system.primaryUser = hostSpec.primaryUser;
+    users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
 
     # These are packages are just for darwin systems
     environment.systemPackages = with pkgs; [

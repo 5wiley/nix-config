@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -110,7 +108,7 @@ in {
   boot.zfs.extraPools = ["incus"];
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = "nix-03";
   };
 
@@ -149,12 +147,12 @@ in {
   # networking.networkmanager.enable = true;  # Easiest to use and most distros use this by default.
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
@@ -171,6 +169,6 @@ in {
     };
   };
 
-  networking.firewall.enable = variables.firewallEnable;
-  system.stateVersion = variables.stateVersion;
+  networking.firewall.enable = hostSpec.firewallEnable;
+  system.stateVersion = hostSpec.stateVersion;
 }
