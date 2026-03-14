@@ -34,9 +34,6 @@
           ((import ./overlays/beets.nix {inherit config pkgs lib unstablePkgs;}) final prev))
 
         # Conditional overlays based on service/module usage
-        (lib.optionalAttrs (config.services.jellyfin.enable or false)
-          ((import ./overlays/jellyfin.nix {inherit config pkgs lib unstablePkgs;}) final prev))
-
         (lib.optionalAttrs (config.boot.supportedFilesystems.zfs or false)
           ((import ./overlays/smart-disk-monitoring.nix {inherit config pkgs lib unstablePkgs;}) final prev))
 

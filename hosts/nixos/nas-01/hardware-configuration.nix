@@ -14,44 +14,22 @@
 
   boot.initrd.availableKernelModules = ["xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod"];
 
-  # Intel A390
-  boot.initrd.kernelModules = ["i915"];
+  boot.initrd.kernelModules = [];
   hardware.enableRedistributableFirmware = true;
-  boot.kernelParams = [
-    "i915.fastboot=1"
-    "i915.enable_guc=3"
-    #"i915.force_probe=4e71"  # For Raptor Lake
-  ];
   hardware.firmware = [pkgs.linux-firmware];
+
+  # AMD Radeon AI Pro R9700 (RDNA4) — VA-API via Mesa radeonsi
   hardware.graphics = {
     enable = true;
     extraPackages = with pkgs; [
-      # intel-vaapi-driver # For older processors. LIBVA_DRIVER_NAME=i965
-
-      # VA-API drivers
-      intel-media-driver # LIBVA_DRIVER_NAME=iHD
-      intel-vaapi-driver
-      libvdpau-va-gl
-
-      # OpenCL and compute support
-      intel-compute-runtime
-      intel-gmmlib
-      vpl-gpu-rt
-
-      # VA-API utilities and libraries
       libva
       libva-utils
-
-      # Diagnostic tools
       mesa-demos
       pciutils
     ];
   };
   environment.sessionVariables = {
-    LIBVA_DRIVER_NAME = "iHD";
-    LIBVA_DRIVERS_PATH = "/run/opengl-driver/lib/dri";
-    LIBVA_MESSAGING_LEVEL = "1";
-    GST_VAAPI_ALL_DRIVERS = "1";
+    LIBVA_DRIVER_NAME = "radeonsi";
   };
 
   # AMD Radeon AI Pro R9700 (RDNA4 / gfx1201)
