@@ -7,6 +7,8 @@ macos-option-as-alt = true
 
 theme = Gruvbox Material Dark
 
+confirm-close-surface = false 
+
 # Theme
 # background = #282c34
 # foreground = #abb2bf

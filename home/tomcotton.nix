@@ -536,6 +536,11 @@ in {
           eval "$(zoxide init zsh)"; alias cd="z"; alias cdi="zi"
         fi
 
+        # Auto-attach to tmux in Ghostty
+        if [[ -z "$TMUX" && "$TERM_PROGRAM" == "Ghostty" ]]; then
+            tmux attach-session -t default 2>/dev/null || tmux new-session -s default
+        fi
+
         # For some reason this was aliased to vi, seems regresive
         # unalias nvim
 
@@ -685,6 +690,7 @@ in {
       devenv
       arduino-cli
       sesh
+      git-lfs
       # claude-code
       # python3Packages.libtmux
       # kubernetes-helm
