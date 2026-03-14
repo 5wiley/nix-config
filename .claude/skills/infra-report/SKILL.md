@@ -126,6 +126,11 @@ Then sample the top offenders (limit 5 each) to classify as genuine vs noisy:
 - `navidrome.service`: Subsonic API scanner warnings
 - `borgmatic.service` / `restic-backups-*.service`: Scrape target timeouts or transient errors (normal when backups are not actively running — these services are periodic, not persistent)
 - `prometheus-smartctl-exporter.service`: Transient "open: permission denied" on devices being scanned (timing issue during device enumeration, not a failure)
+- `polkit.service`: PolicyKit authorization noise on multiple hosts (cosmetic)
+- `grafana.service`: Dashboard query errors (cosmetic)
+- `tsnsrv-*.service`: Tailscale proxy connection errors (transient, self-resolving)
+- `unifi-poller.service`: 401 Unauthorized from UniFi controller (known issue #105)
+- `tailscaled.service`: Connection retry errors (transient)
 
 **Potentially significant text-level errors to flag:**
 - `prometheus-smartctl-exporter.service`: SMART command failures (may indicate failing disk)
@@ -150,6 +155,8 @@ Look for specific failure patterns:
 - `FATAL: Build failed` - nix build failure
 - `incus: command not found` / `awk: command not found` - missing PATH packages
 - `nixos-rebuild-switch-to-configuration.service was already loaded` - stale transient unit
+- `waiting for the big garbage collector lock` / `running auto-GC to free` - GC lock contention during switch (disk too full)
+- `start operation timed out. Terminating.` - service timeout killed the upgrade process
 
 ### 6. Restic Backup Outcomes (nas-01)
 

@@ -128,5 +128,6 @@ if [[ "$FORMAT" == "text" ]]; then
     "\(.[0] | tonumber / 1000000000 | strftime("%Y-%m-%d %H:%M:%S")) [\($s.hostname // "?")] [\($s.unit // $s.job // "?")] \(.[1])"
   ' 2>/dev/null || echo "(no results or parse error)"
 else
-  echo "$result" | jq . 2>/dev/null || echo "$result"
+  # Strip Loki stats metadata to reduce output size (~90% bloat reduction)
+  echo "$result" | jq 'del(.data.stats)' 2>/dev/null || echo "$result"
 fi
