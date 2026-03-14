@@ -168,8 +168,13 @@ Services are organized under `clubcotton/services/` with each having:
 The repository manages a comprehensive media server stack including:
 - Media management (Jellyfin, Navidrome, Calibre-web)
 - Download automation (*arr suite, SABnzbd)
-- Monitoring (Prometheus, Grafana)
+- Monitoring (Prometheus, Grafana, Loki)
 - Infrastructure services (PostgreSQL, networking, storage)
+
+### Service Endpoints
+
+- **Prometheus**: `http://admin:9001` (alerts at `http://admin:9001/alerts`)
+- **Loki**: `http://nas-01.lan:3100`
 
 ### Package Overlays
 
