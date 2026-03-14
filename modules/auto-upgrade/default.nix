@@ -107,6 +107,20 @@ with lib; let
     done
   '';
 
+  # Snippet to clean home-manager profile generations that nix-collect-garbage misses.
+  # nix-collect-garbage only scans /nix/var/nix/profiles/ but home-manager stores
+  # profiles in ~/.local/state/nix/profiles/, causing unbounded generation accumulation.
+  hmProfileCleanup = ''
+    for profile in /home/*/.local/state/nix/profiles/home-manager /root/.local/state/nix/profiles/home-manager; do
+      if [ -e "$profile" ]; then
+        owner="''${profile%/.local/state/nix/profiles/home-manager}"
+        owner="''${owner##*/}"
+        echo "  Cleaning home-manager generations for $owner..."
+        ${config.nix.package}/bin/nix-env --delete-generations ${cfg.garbageCollect.olderThan} --profile "$profile" 2>&1 || echo "WARNING: Failed to clean home-manager profile: $profile"
+      fi
+    done
+  '';
+
   # Main upgrade script
   upgradeScript = pkgs.writeShellScript "auto-upgrade" ''
     set -euo pipefail
@@ -124,6 +138,7 @@ with lib; let
       # GC only runs on success — so without pre-build GC, the disk stays full forever.
       echo ""
       echo "=== Pre-build: Garbage collecting generations older than ${cfg.garbageCollect.olderThan} ==="
+      ${hmProfileCleanup}
       ${config.nix.package}/bin/nix-collect-garbage --delete-older-than ${cfg.garbageCollect.olderThan} || echo "WARNING: Pre-build garbage collection failed (non-fatal)"
     ''}
 
@@ -206,6 +221,7 @@ with lib; let
     ${optionalString cfg.garbageCollect.enable ''
       echo ""
       echo "=== Post-upgrade: Garbage collecting generations older than ${cfg.garbageCollect.olderThan} ==="
+      ${hmProfileCleanup}
       ${config.nix.package}/bin/nix-collect-garbage --delete-older-than ${cfg.garbageCollect.olderThan} || echo "WARNING: Garbage collection failed (non-fatal)"
     ''}
 
