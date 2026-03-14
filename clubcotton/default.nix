@@ -16,6 +16,7 @@
         uid = 1100;
         isSystemUser = true;
         group = "share";
+        extraGroups = ["render" "video"];
       };
     };
   };
