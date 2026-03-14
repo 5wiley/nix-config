@@ -134,6 +134,7 @@ repl:
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc generations="5d":
   nix-env --delete-generations {{generations}}
+  nix-env --delete-generations +3 --profile ~/.local/state/nix/profiles/home-manager
   nix-store --gc
 
 # Run nix flake check to validate all configurations
