@@ -130,7 +130,7 @@ with lib; let
       description = "Grafana logs plugin and datasource errors during normal operation";
     }
     {
-      unit = "~tsnsrv-.*\\.service";
+      unit = "~tsnsrv-.*";
       expression = "(?i)error";
       description = "Tailscale serve proxies log transient connection errors";
     }
@@ -173,7 +173,7 @@ with lib; let
         default = null;
         description = ''
           Systemd unit to scope this rule to. null matches any unit.
-          Prefix with ~ for regex matching (e.g. "~tsnsrv-.*\\.service").
+          Prefix with ~ for regex matching (e.g. "~tsnsrv-.*").
         '';
       };
       expression = mkOption {
