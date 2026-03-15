@@ -480,6 +480,10 @@ in {
           cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 262144 --parallel 2 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
           ttl = 1800;
         };
+        "embeddinggemma-300m-qat-q8_0" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/embeddinggemma-300m-qat-Q8_0.gguf --embeddings -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
       };
     };
   };
