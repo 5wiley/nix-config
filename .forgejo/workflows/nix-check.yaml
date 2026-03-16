@@ -139,61 +139,51 @@ jobs:
           df -h /nix 2>/dev/null || true
           echo "::endgroup::"
 
-          # Build hosts sequentially - remote builders handle parallelism internally
-          mkdir -p /tmp/build-results
-          total_start=$SECONDS
-          failed=""
-          succeeded=""
-
+          # Build ALL hosts in a single nix build invocation so the scheduler
+          # sees the entire derivation graph, deduplicates shared work, and
+          # distributes optimally across all remote builders.
+          build_args=""
           for host in $hosts; do
-            echo ""
-            echo "::group::Build $host"
-
-            # Dry-run to show cache hit stats
-            echo "--- Dry-run for $host ---"
-            drv=".#nixosConfigurations.${host}.config.system.build.toplevel"
-            dry_output=$(nix build "$drv" --dry-run 2>&1) || true
-            will_build=$(echo "$dry_output" | grep -c "will be built" || true)
-            will_fetch=$(echo "$dry_output" | grep -c "will be fetched" || true)
-            echo "  derivations to build: $will_build"
-            echo "  store paths to fetch: $will_fetch"
-            echo ""
-
-            # Timed build
-            host_start=$SECONDS
-            if nix build "$drv" --out-link "/tmp/build-results/${host}.link" 2>&1; then
-              elapsed=$(( SECONDS - host_start ))
-              echo ""
-              echo "OK $host built successfully in ${elapsed}s"
-              echo "ok" > "/tmp/build-results/${host}.status"
-              echo "$elapsed" > "/tmp/build-results/${host}.time"
-              succeeded="$succeeded $host"
-            else
-              elapsed=$(( SECONDS - host_start ))
-              echo ""
-              echo "FAIL $host FAILED after ${elapsed}s"
-              echo "fail" > "/tmp/build-results/${host}.status"
-              echo "$elapsed" > "/tmp/build-results/${host}.time"
-              failed="$failed $host"
-            fi
-            echo "::endgroup::"
+            build_args="$build_args .#nixosConfigurations.${host}.config.system.build.toplevel"
           done
 
+          echo ""
+          echo "Building $host_count hosts in parallel..."
+          echo "Targets:$build_args"
+          echo ""
+
+          total_start=$SECONDS
+          build_exit=0
+          nix build --keep-going --no-link $build_args 2>&1 || build_exit=$?
           total_elapsed=$(( SECONDS - total_start ))
 
-          # Always print results summary
+          # Verify per-host results (instant dry-run for built hosts)
+          echo ""
+          echo "::group::Per-host verification"
+          failed=""
+          succeeded=""
+          for host in $hosts; do
+            drv=".#nixosConfigurations.${host}.config.system.build.toplevel"
+            if nix build "$drv" --dry-run 2>&1 | grep -q "will be built"; then
+              echo "  FAIL  $host"
+              failed="$failed $host"
+            else
+              echo "  OK    $host"
+              succeeded="$succeeded $host"
+            fi
+          done
+          echo "::endgroup::"
+
+          # Results summary
           echo ""
           echo "============================================"
           echo "Build Results (total: ${total_elapsed}s)"
           echo "============================================"
           for host in $hosts; do
-            status=$(cat "/tmp/build-results/${host}.status" 2>/dev/null || echo "unknown")
-            elapsed=$(cat "/tmp/build-results/${host}.time" 2>/dev/null || echo "?")
-            if [ "$status" = "ok" ]; then
-              echo "  OK  $host  (${elapsed}s)"
-            else
-              echo "  FAIL  $host  (${elapsed}s)"
-            fi
+            case " $failed " in
+              *" $host "*) echo "  FAIL  $host" ;;
+              *) echo "  OK    $host" ;;
+            esac
           done
           echo "============================================"
 
