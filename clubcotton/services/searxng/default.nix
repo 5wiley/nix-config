@@ -73,6 +73,9 @@ in {
           limiter = cfg.redisCreateLocally;
           image_proxy = true;
         };
+        search = {
+          formats = ["html" "json"];
+        };
         ui = {
           static_use_hash = true;
         };
