@@ -18,6 +18,18 @@ jobs:
           echo "${{ secrets.NIX_BUILDER_KEY }}" > /run/secrets/nix-builder-key
           chmod 600 /run/secrets/nix-builder-key
 
+          # Override SSH config with aggressive keepalives for large transfers
+          cat > /root/.ssh/config <<'SSHEOF'
+          Host nas-01.lan nix-01.lan nix-02.lan nix-03.lan
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IdentityFile /run/secrets/nix-builder-key
+            ServerAliveInterval 15
+            ServerAliveCountMax 12
+            TCPKeepAlive yes
+            IPQoS throughput
+          SSHEOF
+
       - name: Setup git
         run: |
           git config --global user.email "actions@forgejo.local"
@@ -39,6 +51,10 @@ jobs:
           done
 
       - name: Run nix flake update
+        env:
+          NIX_CONFIG: |
+            stalled-download-timeout = 3600
+            connect-timeout = 30
         run: nix flake update
 
       - name: Fix volatile hashes
