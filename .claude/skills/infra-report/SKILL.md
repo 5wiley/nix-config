@@ -1,8 +1,8 @@
 ---
 name: infra-report
 description: Generate an infrastructure health report from Loki logs. Use when asked to check logs and create a report, generate a health report, summarize infrastructure status, or do a log review.
-allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/*), Bash(ssh *)
-argument-hint: time window (e.g., 'last 12 hours', 'last 24 hours', 'last 7 days')
+allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/infra-report), Bash(./scripts/format-infra-report.sh), Bash(./scripts/infra-report.sh), Bash(./scripts/host-lookup.sh), Bash(ssh *)
+argument-hint: time window (e.g., 'last 12 hours', 'default 24h', 'last 7 days')
 ---
 
 # Infrastructure Health Report Skill
@@ -50,15 +50,29 @@ Use the variable `WINDOW` for the LogQL range (e.g., `[24h]`, `[12h]`, `[7d]`).
 
 ## Quick Start (Automated)
 
-Run all queries in parallel and get a combined JSON dataset:
+### Easiest: Formatted Markdown Report
 
 ```bash
+just infra-report          # Last 24 hours (formatted)
+just infra-report 12h      # Last 12 hours
+just infra-report 7d       # Last 7 days
+```
+
+Or use the convenience wrapper:
+
+```bash
+./scripts/infra-report [time-window]  # e.g., ./scripts/infra-report 24h
+```
+
+### Get Raw JSON (for programmatic use)
+
+```bash
+just infra-report-data          # Last 24 hours (JSON)
+just infra-report-data 12h      # Last 12 hours
 ./scripts/infra-report.sh --since=24h
 ```
 
-The JSON output contains all query results keyed by section (`hosts_reporting`, `error_counts`, `auto_upgrades`, etc.) plus a `meta` object with `expected_hosts` and `generated_at`. Use this to analyze results rather than running queries individually.
-
-For manual investigation or follow-up on specific areas, use the individual queries below or `./scripts/loki-query.sh` directly.
+The JSON output contains all query results keyed by section (`hosts_reporting`, `error_counts`, `auto_upgrades`, etc.) plus a `meta` object with `expected_hosts` and `generated_at`.
 
 ## Queries to Run
 

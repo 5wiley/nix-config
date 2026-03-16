@@ -192,6 +192,13 @@ loki-query *args="":
 infra-report-data *args="":
   ./scripts/infra-report.sh {{args}}
 
+# Generate formatted infrastructure health report
+# Usage: just infra-report          # Last 24 hours
+#        just infra-report 12h      # Last 12 hours
+#        just infra-report 7d       # Last 7 days
+infra-report *args="":
+  ./scripts/infra-report.sh --since={{args}} | ./scripts/format-infra-report.sh
+
 # Download a GGUF model from Hugging Face to nas-01
 # Usage: just download-model bartowski/Meta-Llama-3.1-8B-Instruct-GGUF Q4_K_M
 #        just download-model bartowski/Qwen2.5-72B-Instruct-GGUF Q4_K_M --dry-run
