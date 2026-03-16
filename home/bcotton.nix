@@ -10,6 +10,7 @@
   crushPackage,
   worktrunkPackage,
   qmdPackage,
+  gwsPackage,
   inputs,
   ...
 }: {
@@ -720,6 +721,7 @@
         })
       crushPackage
       worktrunkPackage
+      gwsPackage
     ]
     ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       qmdPackage

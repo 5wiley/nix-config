@@ -48,6 +48,7 @@
         crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
         worktrunkPackage = inputs.worktrunk.packages.${system}.default;
         qmdPackage = inputs.qmd.packages.${system}.default;
+        gwsPackage = inputs.gws.packages.${system}.gws;
       };
     };
 
@@ -447,6 +448,7 @@
               crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
               worktrunkPackage = inputs.worktrunk.packages.${system}.default;
               qmdPackage = inputs.qmd.packages.${system}.default;
+              gwsPackage = inputs.gws.packages.${system}.gws;
             };
           }
           ../hosts/common/common-packages.nix

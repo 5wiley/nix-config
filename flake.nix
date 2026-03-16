@@ -87,6 +87,10 @@
       url = "github:numtide/nix-ai-tools";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
+
+    gws = {
+      url = "github:googleworkspace/cli";
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:
