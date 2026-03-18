@@ -59,7 +59,8 @@ automatically-unhide-macos-hidden-apps = false
     outer.right =      10
 
 [workspace-to-monitor-force-assignment]
-    6 = 'secondary'                  # Non-main monitor in case when there are only two monitors
+    8 = 'secondary'                  # Non-main monitor in case when there are only two monitors
+    9 = 'secondary'                  # Non-main monitor in case when there are only two monitors
 
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes

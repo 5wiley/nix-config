@@ -11,21 +11,23 @@ OpenAndMove()
 }
 
 if [ "$view" == "desktop" ]; then
-        ws=4
-        OpenAndMove "discord" $ws
+        ws=6
         OpenAndMove "mail" $ws
         OpenAndMove "messages" $ws
-        OpenAndMove "spotify" $ws
         aerospace workspace $ws
         aerospace layout h_tiles
 
-        ws=5
+        ws=7
+        OpenAndMove "spotify" $ws
+        OpenAndMove "discord" $ws
+
+        ws=8
         OpenAndMove "ghostty" $ws
         OpenAndMove "finder" $ws
         aerospace workspace $ws
         aerospace layout v_tiles
 
-        ws=6
+        ws=9
         # source ~/.zshrc
         OpenAndMove "zen" $ws
         OpenAndMove "obsidian" $ws

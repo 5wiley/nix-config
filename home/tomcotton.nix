@@ -691,6 +691,7 @@ in {
       arduino-cli
       sesh
       git-lfs
+      hugo
       # claude-code
       # python3Packages.libtmux
       # kubernetes-helm
