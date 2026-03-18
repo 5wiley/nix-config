@@ -406,6 +406,7 @@ in {
           "/tmp"
         ];
       };
+      path = [pkgs.openssh];
       environment = {
         CACHE_URL = cfg.cacheUrl;
         METRICS_FILE = cfg.metricsPath;
