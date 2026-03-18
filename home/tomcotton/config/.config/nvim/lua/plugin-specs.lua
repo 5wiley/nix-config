@@ -9,14 +9,6 @@ local plugin_specs = {
   -- { "hrsh7th/cmp-cmdline", lazy = true },
   -- { "quangnguyen30192/cmp-nvim-ultisnips", lazy = true },
   -- {
-  --   "hrsh7th/nvim-cmp",
-  --   name = "nvim-cmp",
-  --   event = "VeryLazy",
-  --   config = function()
-  --     require("config.nvim-cmp")
-  --   end,
-  -- },
-  -- {
   --   "neovim/nvim-lspconfig",
   --   config = function()
   --     require("config.lsp")
@@ -352,10 +344,29 @@ local plugin_specs = {
   -- Only use these plugin on Windows and Mac and when LaTeX is installed
   {
     "lervag/vimtex",
+    lazy = false,
     -- enabled = function()
     --   return utils.executable("latex")
     -- end,
     ft = { "tex" },
+  },
+  {
+    "hrsh7th/nvim-cmp",
+    dependencies = {
+      "micangl/cmp-vimtex", -- The bridge for VimTeX
+    },
+    name = "nvim-cmp",
+    event = "VeryLazy",
+    config = function()
+    local cmp = require('cmp')
+      cmp.setup({
+        sources = {
+          { name = 'vimtex' }, -- Add VimTeX to your sources
+          { name = 'buffer' },
+        },
+      })
+      -- require("config.nvim-cmp")
+    end,
   },
   {
     "preservim/vim-pencil",
