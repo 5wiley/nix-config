@@ -113,6 +113,7 @@ in {
 
   services.clubcotton = {
     alloy-logs.enable = true;
+    alloy-logs.lokiEndpoint = "https://loki.bobtail-clownfish.ts.net/loki/api/v1/push";
 
     auto-upgrade = {
       enable = true;
