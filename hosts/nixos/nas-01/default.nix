@@ -131,7 +131,7 @@ in {
         ) || echo "WARNING: Post-upgrade smoke test trigger failed (non-fatal)"
       '';
     };
-    calibre.enable = true;
+    calibre.enable = false;
     calibre-web.enable = true;
     filebrowser.enable = true;
     freshrss.enable = true;
@@ -481,7 +481,7 @@ in {
           ttl = 1800;
         };
         "embeddinggemma-300m-qat-q8_0" = {
-          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/embeddinggemma-300m-qat-Q8_0.gguf --embeddings --ubatch-size 2048 --batch-size 2048 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/embeddinggemma-300m-qat-Q8_0.gguf --embeddings -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
           ttl = 1800;
         };
       };
