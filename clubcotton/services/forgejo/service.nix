@@ -292,6 +292,7 @@ in {
           actions = mkIf cfg.features.actions {
             ENABLED = true;
             DEFAULT_ACTIONS_URL = "https://code.forgejo.org";
+            ENDLESS_TASK_TIMEOUT = "6h";
           };
 
           metrics = {

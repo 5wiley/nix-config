@@ -2,7 +2,7 @@ name: Flake Update
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # 06:00 UTC daily (11pm MST)
+    - cron: '30 2 * * *'  # 02:30 UTC daily (8:30pm MDT) — 6h before earliest auto-upgrade
   workflow_dispatch:
 
 jobs:
