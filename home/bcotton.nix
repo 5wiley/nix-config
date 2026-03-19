@@ -649,7 +649,6 @@
       kubectl
       opentofu
 
-      inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system}.default
       # Build beads locally with Go 1.26 - nixpkgs Go 1.25.5 is too old for dolthub/driver
       (let
         buildGoModule126 = unstablePkgs.buildGoModule.override {go = unstablePkgs.go_1_26;};
