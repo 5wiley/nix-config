@@ -27,6 +27,8 @@
         notification-receiver = pkgs.callPackage ../pkgs/notification-receiver {};
         # arc-tab-archiver: Capture auto-archived Arc browser tabs to Obsidian
         arc-tab-archiver = pkgs.callPackage ../pkgs/arc-tab-archiver {};
+        # mole: macOS system maintenance, cleaning, and monitoring tool
+        mole = pkgs.callPackage ../pkgs/mole {};
       }
       # Linux-only packages
       // lib.optionalAttrs pkgs.stdenv.isLinux {
@@ -47,7 +49,7 @@
         inherit (config.packages) primp gwtmux playwright-cli weave;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
-        inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver;
+        inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;
       }
       // lib.optionalAttrs pkgs.stdenv.isLinux {
         inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy;

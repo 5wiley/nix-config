@@ -745,6 +745,7 @@
     ++ lib.optionals stdenv.isDarwin [
       # macOS-only: tmux clipboard integration
       reattach-to-user-namespace
+      localPackages.mole
     ]
     ++ [
       localPackages.playwright-cli
