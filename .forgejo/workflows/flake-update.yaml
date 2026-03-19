@@ -41,14 +41,19 @@ jobs:
       - name: Run nix flake update
         run: nix flake update
 
+      - name: Fix volatile hashes
+        run: |
+          echo "Checking for stale fixed-output derivation hashes..."
+          bash scripts/fix-hashes.sh
+
       - name: Check for changes
         id: check
         run: |
-          if git diff --quiet flake.lock; then
-            echo "No changes to flake.lock"
+          if git diff --quiet; then
+            echo "No changes"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "flake.lock has been updated"
+            echo "Changes detected"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -60,6 +65,7 @@ jobs:
 
           git checkout -b "$BRANCH"
           git add flake.lock
+          git add -u  # pick up any hash-fixed files
           git commit -m "flake.lock: update $(date -u +%Y-%m-%d)"
           git push origin "$BRANCH"
 
