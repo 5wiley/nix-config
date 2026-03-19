@@ -28,9 +28,14 @@ FAILED=0
 #
 # To add a new entry, just append to this array.
 HASH_REGISTRY=(
-  # opencode: npmDepsHash drifts when nixpkgs-unstable updates bun/node
-  ".#nixosConfigurations.admin.config.system.build.toplevel|home/bcotton.nix|npmDepsHash"
+  # Add entries here when a package has a volatile fixed-output hash we override.
+  # Format: BUILD_EXPR|FILE|HASH_ATTR
 )
+
+if [ ${#HASH_REGISTRY[@]} -eq 0 ]; then
+  echo "==> No volatile hashes registered, nothing to check"
+  exit 0
+fi
 
 for entry in "${HASH_REGISTRY[@]}"; do
   IFS='|' read -r BUILD_EXPR FILE HASH_ATTR <<< "$entry"
