@@ -680,6 +680,8 @@
           });
         })
         .overrideAttrs {
+          # npmDepsHash changes when nixpkgs-unstable updates bun/node
+          npmDepsHash = "sha256-b0IXNtTj5geRLZGtCI5DxOXyqBJoxuwVf++bUgY3dco=";
           preBuild = ''
             mkdir -p .github
             touch .github/TEAM_MEMBERS
