@@ -14,6 +14,8 @@
         playwright-cli = pkgs.callPackage ../pkgs/playwright-cli (
           lib.optionalAttrs pkgs.stdenv.isDarwin {chromium = null;}
         );
+        # weave: Entity-level semantic merge driver for Git
+        weave = pkgs.callPackage ../pkgs/weave {};
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -42,7 +44,7 @@
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux playwright-cli;
+        inherit (config.packages) primp gwtmux playwright-cli weave;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver;

@@ -748,6 +748,7 @@
     ]
     ++ [
       localPackages.playwright-cli
+      localPackages.weave
     ]
     ++ [
       # Additional tools
