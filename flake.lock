@@ -797,6 +797,20 @@
     },
     "nixpkgs_10": {
       "locked": {
+        "lastModified": 1682134069,
+        "narHash": "sha256-TnI/ZXSmRxQDt2sjRYK/8j8iha4B4zP2cnQCZZ3vp7k=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "fd901ef4bf93499374c5af385b2943f5801c0833",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_11": {
+      "locked": {
         "lastModified": 1767892417,
         "narHash": "sha256-dhhvQY67aboBk8b0/u0XB6vwHdgbROZT3fJAjyNh5Ww=",
         "owner": "NixOS",
@@ -921,30 +935,30 @@
     },
     "nixpkgs_9": {
       "locked": {
-        "lastModified": 1682134069,
-        "narHash": "sha256-TnI/ZXSmRxQDt2sjRYK/8j8iha4B4zP2cnQCZZ3vp7k=",
+        "lastModified": 1772091128,
+        "narHash": "sha256-TnrYykX8Mf/Ugtkix6V+PjW7miU2yClA6uqWl/v6KWM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "fd901ef4bf93499374c5af385b2943f5801c0833",
+        "rev": "3f0336406035444b4a24b942788334af5f906259",
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "opencode": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs-unstable"
-        ]
+        "nixpkgs": "nixpkgs_9"
       },
       "locked": {
-        "lastModified": 1773289184,
-        "narHash": "sha256-cj6PbpB57NTwK8lMnvVBaQXU7aWtyb53t2lmu4yj/KY=",
+        "lastModified": 1773942770,
+        "narHash": "sha256-wKcXljJEJop3LC54XCyIEudJRepDbdZca9MLRvL6YfA=",
         "owner": "sst",
         "repo": "opencode",
-        "rev": "54e7baa6cfff86627e5555842560b4a20e4be424",
+        "rev": "a6f23cb08ee451e3f38a161dc314e9fb92e73a39",
         "type": "github"
       },
       "original": {
@@ -1310,7 +1324,7 @@
     "vscode-server": {
       "inputs": {
         "flake-utils": "flake-utils_5",
-        "nixpkgs": "nixpkgs_9"
+        "nixpkgs": "nixpkgs_10"
       },
       "locked": {
         "lastModified": 1741400471,
@@ -1352,7 +1366,7 @@
       "inputs": {
         "crane": "crane",
         "flake-utils": "flake-utils_7",
-        "nixpkgs": "nixpkgs_10",
+        "nixpkgs": "nixpkgs_11",
         "rust-overlay": "rust-overlay"
       },
       "locked": {
