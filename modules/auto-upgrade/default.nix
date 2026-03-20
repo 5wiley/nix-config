@@ -382,7 +382,7 @@ in {
       serviceConfig = {
         Type = "oneshot";
         ExecStart = upgradeScript;
-        TimeoutStartSec = "30min";
+        TimeoutStartSec = "60min";
 
         # Logging
         StandardOutput = "journal+console";
@@ -393,6 +393,7 @@ in {
         [
           config.nix.package
           gitMinimal
+          openssh
           coreutils
           gawk
           gnugrep
