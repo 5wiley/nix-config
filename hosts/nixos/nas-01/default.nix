@@ -191,6 +191,7 @@ in {
     amdgpu_top
     python3Packages.huggingface-hub
     toolbox
+    inputs.llmfit.packages.${hostSpec.system}.default
   ];
 
   services.clubcotton.harmonia = {

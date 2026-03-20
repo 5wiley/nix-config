@@ -86,6 +86,11 @@
     gws = {
       url = "github:googleworkspace/cli";
     };
+
+    llmfit = {
+      url = "github:AlexsJones/llmfit";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:
