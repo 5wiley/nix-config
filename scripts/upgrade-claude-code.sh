@@ -45,7 +45,7 @@ echo -e "${YELLOW}==> Updating to version ${LATEST_VERSION}...${NC}"
 echo -e "${BLUE}==> Fetching source hash...${NC}"
 SOURCE_URL="https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${LATEST_VERSION}.tgz"
 SOURCE_HASH_NIX32=$(nix-prefetch-url --unpack "$SOURCE_URL" 2>/dev/null)
-SOURCE_HASH_SRI=$(nix hash convert --hash-algo sha256 --to sri "$SOURCE_HASH_NIX32")
+SOURCE_HASH_SRI=$(nix hash to-sri --type sha256 "$SOURCE_HASH_NIX32")
 echo -e "${GREEN}Source hash: ${SOURCE_HASH_SRI}${NC}"
 
 # Step 2: Generate package-lock.json
