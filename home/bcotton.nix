@@ -695,7 +695,6 @@
       unstablePkgs.sesh
       unstablePkgs.uv
       tldr
-      zed-editor
       zsh-defer # Step 4: Needed for deferred initialization
 
       # Migrated from Homebrew brews
