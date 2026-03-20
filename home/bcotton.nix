@@ -610,10 +610,6 @@
       # Generate host list from nixosHosts for RemoteForward configuration
       remoteForwardHosts = lib.concatStringsSep " " nixosHosts;
     in ''
-      Host nas-01 nix-02 nix-03
-        IdentityFile ~/.ssh/nix-builder-id_ed25519
-        IdentitiesOnly no
-
       # Remote browser opening - forward port 7890 from remote Linux hosts
       # to localhost:7890 where browser-opener listens (macOS only)
       # Remote clipboard - forward port 7891 for clipboard-receiver
