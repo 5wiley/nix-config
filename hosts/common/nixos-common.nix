@@ -35,6 +35,14 @@ in {
     done
   '';
 
+  # Allow non-ETM SHA-2 MACs for Echo/Alexa SSH compatibility
+  services.openssh.settings.Macs = [
+    "hmac-sha2-256-etm@openssh.com"
+    "hmac-sha2-512-etm@openssh.com"
+    "hmac-sha2-256"
+    "hmac-sha2-512"
+  ];
+
   environment.systemPackages = with pkgs; [
     inputs.isd.packages."${system}".default
     file
