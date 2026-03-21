@@ -650,10 +650,10 @@
         buildGoModule126 = unstablePkgs.buildGoModule.override {go = unstablePkgs.go_1_26;};
         bdBase = buildGoModule126 {
           pname = "beads";
-          version = "0.52.0";
+          version = "0.61.0";
           src = inputs.beads;
           subPackages = ["cmd/bd"];
-          vendorHash = "sha256-M+JCxrKgUxCczYzMc2czLZ/JhdVulo7dH2YLTPrJVSc=";
+          vendorHash = "sha256-3V0FrqJ/ajDlMyquAZo1jUmYXF4TneBoh3VTsjvwyq0=";
           nativeBuildInputs = [pkgs.git pkgs.pkg-config];
           buildInputs = [pkgs.icu];
           doCheck = false;
