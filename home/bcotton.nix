@@ -653,7 +653,7 @@
           version = "0.61.0";
           src = inputs.beads;
           subPackages = ["cmd/bd"];
-          vendorHash = "sha256-R8x4Jlelz50I533PlzzGn04hrGtUs2aGXBTXkEkXI08=";
+          vendorHash = "sha256-wcFAvGoDR9IYckWRMqPqCgPSUKmoYYyYg0dfNGDI6Go=";
           nativeBuildInputs = [pkgs.git pkgs.pkg-config];
           buildInputs = [pkgs.icu];
           doCheck = false;
