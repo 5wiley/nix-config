@@ -80,7 +80,7 @@ echo -e "${GREEN}Updated flake.nix to ${LATEST_TAG}${NC}"
 # Step 3: Update home/bcotton.nix
 echo -e "${BLUE}==> Updating home/bcotton.nix...${NC}"
 sed_inplace "s/version = \"[^\"]*\";/version = \"${LATEST_TAG#v}\";/" home/bcotton.nix
-sed_inplace 's|vendorHash = "sha256-[^\"]*";|vendorHash = "'"$VENDOR_HASH"'";/' home/bcotton.nix
+# Note: beads uses Go modules, not vendoring, so we don't update vendorHash
 echo -e "${GREEN}Updated home/bcotton.nix${NC}"
 
 # Step 4: Build to verify
