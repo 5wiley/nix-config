@@ -25,6 +25,10 @@ in {
     ../../../modules/systemd-network
   ];
 
+  environment.systemPackages = with pkgs; [
+    dolt
+  ];
+
   # Incus cluster controller for clubcotton site
   services.incus-cluster = {
     enable = true;

@@ -24,6 +24,10 @@ in {
     ../../../modules/systemd-network
   ];
 
+  environment.systemPackages = with pkgs; [
+    dolt
+  ];
+
   services.clubcotton = {
     alloy-logs = {
       enable = true;

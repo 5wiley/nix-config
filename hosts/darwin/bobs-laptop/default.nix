@@ -16,6 +16,7 @@ in {
 
     # These are packages are just for darwin systems
     environment.systemPackages = with pkgs; [
+      dolt
       kind
       # esphome  # disabled: depends on bleak which is Linux-only
       esptool
