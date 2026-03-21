@@ -705,6 +705,7 @@
       (azure-cli.withExtensions [azure-cli.extensions.account])
       devbox
       golangci-lint
+      bun
       nodejs_24
       mise
       shellcheck
