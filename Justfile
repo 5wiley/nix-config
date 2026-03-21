@@ -192,6 +192,10 @@ loki-query *args="":
 infra-report-data *args="":
   ./scripts/infra-report.sh {{args}}
 
+# Analyze llama-swap model performance from Loki logs
+llama-perf *args="":
+  ./scripts/llama-perf.sh {{args}}
+
 # Download a GGUF model from Hugging Face to nas-01
 # Usage: just download-model bartowski/Meta-Llama-3.1-8B-Instruct-GGUF Q4_K_M
 #        just download-model bartowski/Qwen2.5-72B-Instruct-GGUF Q4_K_M --dry-run
