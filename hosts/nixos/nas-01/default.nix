@@ -234,6 +234,7 @@ in {
   services.clubcotton.loki = {
     s3.endpoint = "nas-01:3900";
     s3.environmentFile = config.age.secrets."loki-s3".path;
+    rulesDir = ../../../clubcotton/services/loki/rules;
   };
 
   services.clubcotton.tempo = {

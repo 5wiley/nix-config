@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 with lib; let
@@ -78,6 +79,11 @@ in {
     homepage.category = lib.mkOption {
       type = lib.types.str;
       default = "Infrastructure";
+    };
+    rulesDir = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = "Directory of recording/alerting rule YAML files to deploy.";
     };
   };
 
@@ -172,18 +178,35 @@ in {
           };
         };
 
+        ruler = lib.mkIf (cfg.rulesDir != null) {
+          enable_api = true;
+          evaluation_interval = "1m";
+          storage = {
+            type = "local";
+            local.directory = "${cfg.dataDir}/rules";
+          };
+          remote_write = {
+            enabled = true;
+            clients.mimir.url = "http://localhost:9009/api/v1/push";
+          };
+        };
+
         analytics = {
           reporting_enabled = false;
         };
       };
     };
 
-    systemd.services.loki.serviceConfig = {
-      EnvironmentFile = cfg.s3.environmentFile;
-      DynamicUser = lib.mkForce false;
-      User = "loki";
-      Group = "loki";
-    };
+    systemd.services.loki.serviceConfig =
+      {
+        EnvironmentFile = cfg.s3.environmentFile;
+        DynamicUser = lib.mkForce false;
+        User = "loki";
+        Group = "loki";
+      }
+      // lib.optionalAttrs (cfg.rulesDir != null) {
+        ExecStartPre = "+${lib.getExe' pkgs.bash "bash"} -c '${lib.getExe' pkgs.coreutils "cp"} ${cfg.rulesDir}/*.yml ${cfg.dataDir}/rules/fake/ && ${lib.getExe' pkgs.coreutils "chown"} -R loki:loki ${cfg.dataDir}/rules/'";
+      };
 
     users.users.loki = {
       isSystemUser = true;
@@ -192,13 +215,18 @@ in {
     };
     users.groups.loki = {};
 
-    systemd.tmpfiles.rules = [
-      "d ${cfg.dataDir} 0750 loki loki - -"
-      "d ${cfg.dataDir}/tsdb-index 0750 loki loki - -"
-      "d ${cfg.dataDir}/tsdb-cache 0750 loki loki - -"
-      "d ${cfg.dataDir}/wal 0750 loki loki - -"
-      "d ${cfg.dataDir}/compactor 0750 loki loki - -"
-    ];
+    systemd.tmpfiles.rules =
+      [
+        "d ${cfg.dataDir} 0750 loki loki - -"
+        "d ${cfg.dataDir}/tsdb-index 0750 loki loki - -"
+        "d ${cfg.dataDir}/tsdb-cache 0750 loki loki - -"
+        "d ${cfg.dataDir}/wal 0750 loki loki - -"
+        "d ${cfg.dataDir}/compactor 0750 loki loki - -"
+      ]
+      ++ lib.optionals (cfg.rulesDir != null) [
+        "d ${cfg.dataDir}/rules 0750 loki loki - -"
+        "d ${cfg.dataDir}/rules/fake 0750 loki loki - -"
+      ];
 
     services.tsnsrv = {
       enable = true;
