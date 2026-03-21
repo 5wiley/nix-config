@@ -40,6 +40,11 @@ in {
   };
 
   clubcotton.zfs_single_root.enable = true;
+
+  # Suppress WARN-level smartctl exporter noise: /dev/sda has 1 stale historical
+  # error in its SMART log (from 8400+ hours ago), causing ~960 false warnings/day.
+  # Disk is healthy (0 reallocated sectors, 0 read errors, PASSED self-test).
+  services.prometheus.exporters.smartctl.extraFlags = ["--log.level=error"];
   virtualisation.podman.enable = true;
   virtualisation.libvirtd = {
     enable = true;
