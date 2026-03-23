@@ -143,7 +143,7 @@ in {
       historyLimit = 20000;
       baseIndex = 1;
       aggressiveResize = true;
-      # escapeTime = 0;
+      escapeTime = 0;
       terminal = "screen-256color";
 
       plugins = with pkgs.tmuxPlugins; [
