@@ -163,6 +163,12 @@ in {
             ''}
           '';
         }
+        {
+          plugin = resurrect;
+          extraConfig = ''
+            set -g @resurrect-processes '"~claude *"'
+          '';
+        }
         extrakto
         {
           plugin = tmux-window-name;
