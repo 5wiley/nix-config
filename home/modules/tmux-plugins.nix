@@ -116,6 +116,64 @@
       passthru = unwrapped.passthru or {};
     };
 
+  # Wrap tmux-resurrect to add a custom save command strategy that reads
+  # the actual typed command from a tmux pane user option (@user-command),
+  # set by a zsh preexec hook. Falls back to the default ps-based strategy.
+  tmux-resurrect = let
+    unwrapped = pkgs.tmuxPlugins.resurrect;
+    wrapped = pkgs.runCommand "tmux-resurrect-wrapped" {} ''
+            cp -r ${unwrapped} $out
+            chmod -R +w $out
+
+            cat > $out/share/tmux-plugins/resurrect/save_command_strategies/pane_user_option.sh << 'STRATEGY'
+      #!/usr/bin/env bash
+
+      PANE_PID="$1"
+
+      exit_safely_if_empty_ppid() {
+        if [ -z "$PANE_PID" ]; then
+          exit 0
+        fi
+      }
+
+      full_command_from_pane_option() {
+        # Find the pane_id (%N) for this PID
+        local pane_id
+        pane_id=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' | grep "^${PANE_PID} " | head -1 | cut -d' ' -f2)
+        if [ -n "$pane_id" ]; then
+          local cmd
+          cmd=$(tmux display-message -p -t "$pane_id" '#{@user-command}' 2>/dev/null)
+          if [ -n "$cmd" ]; then
+            echo "$cmd"
+            return 0
+          fi
+        fi
+        return 1
+      }
+
+      full_command_from_ps() {
+        ps -ao "ppid,args" |
+          sed "s/^ *//" |
+          grep "^${PANE_PID}" |
+          cut -d' ' -f2-
+      }
+
+      main() {
+        exit_safely_if_empty_ppid
+        full_command_from_pane_option || full_command_from_ps
+      }
+      main
+      STRATEGY
+            chmod +x $out/share/tmux-plugins/resurrect/save_command_strategies/pane_user_option.sh
+    '';
+  in
+    wrapped
+    // {
+      inherit (unwrapped) pname version meta;
+      rtp = "${wrapped}/share/tmux-plugins/resurrect/resurrect.tmux";
+      passthru = unwrapped.passthru or {};
+    };
+
   tmux-file-picker-src = pkgs.fetchFromGitHub {
     owner = "raine";
     repo = "tmux-file-picker";
@@ -164,9 +222,10 @@ in {
           '';
         }
         {
-          plugin = resurrect;
+          plugin = tmux-resurrect;
           extraConfig = ''
-            set -g @resurrect-processes '"~/claudep->claudep" "~/claude->claude"'
+            set -g @resurrect-save-command-strategy 'pane_user_option'
+            set -g @resurrect-processes '"~claudep->claudep" "~claude->claude"'
           '';
         }
         extrakto
@@ -314,6 +373,16 @@ in {
       if [[ -n "$TMUX" ]]; then
         add-zsh-hook chpwd tmux-window-name
       fi
+
+      # Track the actual typed command in a tmux pane user option so that
+      # tmux-resurrect can save/restore it (instead of relying on ps output,
+      # which can't distinguish shell functions like claude vs claudep).
+      _tmux_resurrect_track_command() {
+        if [[ -n "$TMUX" ]]; then
+          tmux set-option -p @user-command "$1" 2>/dev/null
+        fi
+      }
+      add-zsh-hook preexec _tmux_resurrect_track_command
     '';
   };
 }
