@@ -46,12 +46,6 @@ in {
   # Disk is healthy (0 reallocated sectors, 0 read errors, PASSED self-test).
   services.prometheus.exporters.smartctl.extraFlags = ["--log.level=error"];
   virtualisation.podman.enable = true;
-  virtualisation.libvirtd = {
-    enable = true;
-    qemu = {
-      package = pkgs.qemu_kvm;
-    };
-  };
 
   programs.zsh.enable = hostSpec.zshEnable;
   services.openssh.enable = hostSpec.opensshEnable;
