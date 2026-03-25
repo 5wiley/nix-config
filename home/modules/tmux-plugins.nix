@@ -139,7 +139,7 @@
       full_command_from_pane_option() {
         # Find the pane_id (%N) for this PID
         local pane_id
-        pane_id=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' | grep "^${PANE_PID} " | head -1 | cut -d' ' -f2)
+        pane_id=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' | grep "^''${PANE_PID} " | head -1 | cut -d' ' -f2)
         if [ -n "$pane_id" ]; then
           local cmd
           cmd=$(tmux display-message -p -t "$pane_id" '#{@user-command}' 2>/dev/null)
@@ -154,7 +154,7 @@
       full_command_from_ps() {
         ps -ao "ppid,args" |
           sed "s/^ *//" |
-          grep "^${PANE_PID}" |
+          grep "^''${PANE_PID}" |
           cut -d' ' -f2-
       }
 
