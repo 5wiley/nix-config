@@ -293,6 +293,10 @@ in {
             ENABLED = true;
             DEFAULT_ACTIONS_URL = "https://code.forgejo.org";
             ENDLESS_TASK_TIMEOUT = "6h";
+            # Nix builds can be silent for extended periods during compilation,
+            # causing the default 10m heartbeat timeout to kill running tasks.
+            # The runner reports "log file has been archived" when this fires.
+            ZOMBIE_TASK_TIMEOUT = "30m";
           };
 
           metrics = {
