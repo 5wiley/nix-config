@@ -166,7 +166,7 @@ in {
         {
           plugin = resurrect;
           extraConfig = ''
-            set -g @resurrect-processes '"~claude *"'
+            set -g @resurrect-processes '"~/claudep->claudep" "~/claude->claude"'
           '';
         }
         extrakto

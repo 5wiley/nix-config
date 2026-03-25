@@ -228,6 +228,30 @@
     target = ".oh-my-zsh-custom";
   };
 
+  # Claude wrapper scripts in ~/.local/bin/
+  # These are actual scripts (not shell functions) so they appear as distinct
+  # processes in `ps`, allowing tmux-resurrect to distinguish and restore them.
+  # The scripts intentionally do NOT use `exec` — they stay as the parent process
+  # so tmux-resurrect captures the script name rather than the node process
+  # (which always sets process.title="claude" regardless of argv[0]).
+  home.file.".local/bin/claude" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+      CLAUDE_CONFIG_DIR=~/.claude ${pkgs.claude-code}/bin/claude "$@" --allow-dangerously-skip-permissions
+    '';
+  };
+
+  home.file.".local/bin/claudep" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      source ~/.config/sensitive/.claude-personal-env
+      CLAUDE_CONFIG_DIR=~/.claude-personal ${pkgs.claude-code}/bin/claude "$@" --allow-dangerously-skip-permissions
+    '';
+  };
+
   xdg = {
     enable = true;
     configFile."containers/registries.conf" = {
