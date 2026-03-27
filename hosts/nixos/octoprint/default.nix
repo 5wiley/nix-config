@@ -65,6 +65,12 @@ in {
   };
   services.displayManager.defaultSession = "xfce";
 
+  # Disable GTK icon cache rebuild in system-path — works around a
+  # gtk-update-icon-cache rename failure that only manifests inside the
+  # Docker-based CI container (overlayfs + nix sandbox interaction).
+  # Icon themes ship their own pre-built caches so this has no user impact.
+  gtk.iconCache.enable = false;
+
   # Configure keymap in X11
   services.xserver.xkb.layout = "us";
   services.xserver.xkb.options = "eurosign:e,caps:escape";
