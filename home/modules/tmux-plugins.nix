@@ -228,13 +228,8 @@ in {
             set -g @resurrect-processes '"~claudep->claudep" "~claude->claude"'
           '';
         }
-        {
-          plugin = continuum;
-          extraConfig = ''
-            set -g @continuum-restore 'on'
-            set -g @continuum-save-interval '15'
-          '';
-        }
+        # NOTE: continuum is loaded via run-shell in extraConfig AFTER powerkit,
+        # because continuum hooks into status-right and powerkit overwrites it.
         extrakto
         {
           plugin = tmux-window-name;
@@ -360,6 +355,13 @@ in {
         run-shell ${tmux-nested}/share/tmux-plugins/tmux-nested/nested.tmux
         run-shell ${tmux-fuzzback}/share/tmux-plugins/tmux-fuzzback/fuzzback.tmux
         run-shell ${tmux-powerkit}/share/tmux-plugins/tmux-powerkit/tmux-powerkit.tmux
+
+        # Continuum must load AFTER powerkit, because it prepends its auto-save
+        # script to status-right. If powerkit loads later, it overwrites status-right
+        # and the auto-save hook is lost.
+        set -g @continuum-restore 'on'
+        set -g @continuum-save-interval '15'
+        run-shell ${pkgs.tmuxPlugins.continuum}/share/tmux-plugins/continuum/continuum.tmux
 
         # tmux-file-picker keybindings
         bind C-f display-popup -E "${tmux-file-picker-src}/tmux-file-picker"
