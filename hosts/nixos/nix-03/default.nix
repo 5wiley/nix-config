@@ -173,6 +173,12 @@ in {
     };
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
   networking.firewall.enable = hostSpec.firewallEnable;
   system.stateVersion = hostSpec.stateVersion;
 }

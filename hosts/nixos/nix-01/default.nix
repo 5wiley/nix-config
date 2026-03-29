@@ -229,6 +229,12 @@ in {
     };
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
   services.clubcotton.code-server = {
     tailnetHostname = "nix-01-vscode";
     user = "bcotton";

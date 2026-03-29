@@ -167,6 +167,12 @@ in {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
   services.openssh.enable = hostSpec.opensshEnable;
   # TODO
   networking.firewall.enable = hostSpec.firewallEnable;
