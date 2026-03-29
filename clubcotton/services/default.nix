@@ -11,6 +11,7 @@
     ./borgmatic
     ./calibre
     ./calibre-web
+    ./claude-relay
     ./cloudflare-tunnel
     ./filebrowser
     ./forgejo

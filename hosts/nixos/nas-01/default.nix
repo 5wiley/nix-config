@@ -206,6 +206,12 @@ in {
     };
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
   services.clubcotton.redis = {
     bindAddress = "0.0.0.0";
     openFirewall = true;
