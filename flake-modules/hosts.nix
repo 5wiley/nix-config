@@ -49,6 +49,7 @@
         worktrunkPackage = inputs.worktrunk.packages.${system}.default;
         qmdPackage = inputs.qmd.packages.${system}.default;
         gwsPackage = inputs.gws.packages.${system}.gws;
+        devenvPackage = inputs.devenv.packages.${system}.devenv;
       };
     };
 
@@ -449,6 +450,7 @@
               worktrunkPackage = inputs.worktrunk.packages.${system}.default;
               qmdPackage = inputs.qmd.packages.${system}.default;
               gwsPackage = inputs.gws.packages.${system}.gws;
+              devenvPackage = inputs.devenv.packages.${system}.devenv;
             };
           }
           ../hosts/common/common-packages.nix

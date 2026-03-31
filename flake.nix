@@ -91,6 +91,10 @@
       url = "github:AlexsJones/llmfit";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    devenv = {
+      url = "github:cachix/devenv/latest";
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:

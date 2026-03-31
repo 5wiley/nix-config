@@ -3,6 +3,7 @@
   pkgs,
   lib,
   unstablePkgs,
+  devenvPackage,
   ...
 }: let
   # See https://haseebmajid.dev/posts/2023-07-10-setting-up-tmux-with-nix-home-manager/
@@ -590,7 +591,7 @@ in {
     lf
     vimv
     subversion
-    devenv
+    devenvPackage
     arduino-cli
     # claude-code
     # python3Packages.libtmux

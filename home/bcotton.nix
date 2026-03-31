@@ -11,6 +11,7 @@
   worktrunkPackage,
   qmdPackage,
   gwsPackage,
+  devenvPackage,
   inputs,
   ...
 }: {
@@ -660,7 +661,7 @@
       bitwarden-cli
       bottom
       claude-code
-      devenv
+      devenvPackage
       docker-compose
       forgejo-cli
       fx
