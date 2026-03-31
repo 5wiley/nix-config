@@ -184,6 +184,9 @@
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
+    stdlib = builtins.readFile (pkgs.runCommandLocal "devenv-direnvrc" {} ''
+      ${devenvPackage}/bin/devenv direnvrc > $out
+    '');
   };
 
   programs.fzf = {
