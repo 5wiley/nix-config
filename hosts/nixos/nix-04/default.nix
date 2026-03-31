@@ -26,6 +26,19 @@ in {
     freshrss.enable = false;
     paperless.enable = false;
     filebrowser.enable = false;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:30";
+      healthChecks = {
+        pingTargets = ["192.168.12.1"];
+        services = ["sshd"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+      };
+    };
   };
 
   clubcotton.zfs_single_root.enable = true;
