@@ -343,14 +343,14 @@ in {
 
       grpcPort = mkOption {
         type = types.port;
-        default = 4317;
-        description = "OTLP gRPC listen port.";
+        default = 4327;
+        description = "OTLP gRPC listen port (4327 to avoid conflict with Tempo on 4317).";
       };
 
       httpPort = mkOption {
         type = types.port;
-        default = 4318;
-        description = "OTLP HTTP listen port.";
+        default = 4328;
+        description = "OTLP HTTP listen port (4328 to avoid conflict with Tempo on 4318).";
       };
 
       tempoEndpoint = mkOption {
