@@ -16,6 +16,8 @@
         );
         # weave: Entity-level semantic merge driver for Git
         weave = pkgs.callPackage ../pkgs/weave {};
+        # pg-scram-hash: Generate PostgreSQL SCRAM-SHA-256 password hashes
+        pg-scram-hash = pkgs.callPackage ../pkgs/pg-scram-hash {};
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -46,7 +48,7 @@
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux playwright-cli weave;
+        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;
