@@ -19,6 +19,7 @@ in {
     ../../../modules/node-exporter
     ../../../modules/nfs
     # nix-builder client is enabled via flake-modules/hosts.nix
+    inputs.nix-builder-config.nixosModules.coordinator
     inputs.nix-builder-config.nixosModules.cache-pusher
     ../../../modules/incus
     ../../../modules/systemd-network
@@ -93,6 +94,37 @@ in {
   };
 
   nix.settings.trusted-users = ["nix-builder"];
+
+  # Configure distributed build fleet (same as nix-01, excluding self)
+  services.nix-builder.coordinator = {
+    enable = true;
+    sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
+    enableLocalBuilds = true;
+    localCache = null; # nas-01 handles cache signing
+    builders = [
+      {
+        hostname = "nas-01.lan";
+        systems = ["x86_64-linux"];
+        maxJobs = 16;
+        speedFactor = 2;
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+      }
+      {
+        hostname = "nix-01.lan";
+        systems = ["x86_64-linux"];
+        maxJobs = 16;
+        speedFactor = 4;
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+      }
+      {
+        hostname = "nix-03.lan";
+        systems = ["x86_64-linux"];
+        maxJobs = 16;
+        speedFactor = 4;
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+      }
+    ];
+  };
 
   # Push all locally-built paths to the Harmonia cache on nas-01
   services.nix-builder.cache-pusher = {

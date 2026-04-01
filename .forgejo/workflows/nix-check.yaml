@@ -111,6 +111,7 @@ jobs:
           NIX_CONFIG: |
             stalled-download-timeout = 3600
             connect-timeout = 30
+            builders-use-substitutes = true
         run: |
           echo "Building all NixOS host system closures..."
           all_hosts=$(nix eval --raw '.#nixosConfigurations' --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)')
