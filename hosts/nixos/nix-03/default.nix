@@ -29,7 +29,10 @@ in {
   ];
 
   services.clubcotton = {
-    alloy-logs.enable = true;
+    alloy-logs = {
+      enable = true;
+      otelReceiver.enable = true;
+    };
     tailscale.enable = true;
     nut-client.enable = true;
 

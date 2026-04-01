@@ -86,6 +86,55 @@ with lib; let
     }
   '';
 
+  otelCfg = cfg.otelReceiver;
+
+  otelBlock = ''
+    otelcol.receiver.otlp "default" {
+      grpc {
+        endpoint = "0.0.0.0:${toString otelCfg.grpcPort}"
+      }
+      http {
+        endpoint = "0.0.0.0:${toString otelCfg.httpPort}"
+      }
+      output {
+        metrics = [otelcol.processor.batch.default.input]
+        logs    = [otelcol.processor.batch.default.input]
+        traces  = [otelcol.processor.batch.default.input]
+      }
+    }
+
+    otelcol.processor.batch "default" {
+      output {
+        metrics = [otelcol.exporter.prometheus.default.input]
+        logs    = [otelcol.exporter.loki.default.input]
+        traces  = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "${otelCfg.tempoEndpoint}"
+        tls {
+          insecure = true
+        }
+      }
+    }
+
+    otelcol.exporter.prometheus "default" {
+      forward_to = [prometheus.remote_write.mimir.receiver]
+    }
+
+    prometheus.remote_write "mimir" {
+      endpoint {
+        url = "${otelCfg.mimirEndpoint}"
+      }
+    }
+
+    otelcol.exporter.loki "default" {
+      forward_to = [loki.write.default.receiver]
+    }
+  '';
+
   # Where journal logs are forwarded: through noise filter or directly to loki.write
   journalForwardTo =
     if nfCfg.enable && allNoiseRules != []
@@ -233,6 +282,8 @@ with lib; let
 
     ${fileSourceBlocks}
 
+    ${optionalString otelCfg.enable otelBlock}
+
     loki.write "default" {
       endpoint {
         url = "${cfg.lokiEndpoint}"
@@ -283,6 +334,38 @@ in {
       description = "File paths to tail and forward to Loki.";
     };
 
+    otelReceiver = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Enable OpenTelemetry OTLP receiver to accept traces, metrics, and logs.";
+      };
+
+      grpcPort = mkOption {
+        type = types.port;
+        default = 4317;
+        description = "OTLP gRPC listen port.";
+      };
+
+      httpPort = mkOption {
+        type = types.port;
+        default = 4318;
+        description = "OTLP HTTP listen port.";
+      };
+
+      tempoEndpoint = mkOption {
+        type = types.str;
+        default = "nas-01.lan:4317";
+        description = "Tempo gRPC endpoint for trace export (host:port, no scheme).";
+      };
+
+      mimirEndpoint = mkOption {
+        type = types.str;
+        default = "http://nas-01.lan:9009/api/v1/push";
+        description = "Mimir remote-write endpoint for metrics export.";
+      };
+    };
+
     noiseFilter = {
       enable = mkOption {
         type = types.bool;
@@ -316,6 +399,11 @@ in {
         cp "${alloyConfig}" "$out/config.alloy"
       '';
     };
+
+    networking.firewall.allowedTCPPorts = mkIf otelCfg.enable [
+      otelCfg.grpcPort
+      otelCfg.httpPort
+    ];
 
     # DynamicUser=true (set by the upstream alloy module) implies PrivateTmp,
     # so Alloy can't see files under /tmp. Bind-mount each fileTarget's parent

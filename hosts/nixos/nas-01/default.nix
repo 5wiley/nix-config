@@ -36,7 +36,10 @@ in {
   disabledModules = ["services/printing/cups-pdf.nix"];
 
   services.clubcotton = {
-    alloy-logs.enable = true;
+    alloy-logs = {
+      enable = true;
+      otelReceiver.enable = true;
+    };
     atuin.enable = true;
 
     auto-upgrade = {

@@ -31,6 +31,7 @@ in {
   services.clubcotton = {
     alloy-logs = {
       enable = true;
+      otelReceiver.enable = true;
       fileTargets = [
         {
           job = "openclaw";
