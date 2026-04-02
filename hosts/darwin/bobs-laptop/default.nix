@@ -25,6 +25,8 @@ in {
       yarn-berry
       webpack-cli
       pnpm_10
+      # Java
+      jdk21
     ];
 
     nixpkgs.config.allowUnfree = true;

@@ -739,7 +739,7 @@
       mise
       shellcheck
       tea
-      yarn
+      yarn-berry
       terraform
       trufflehog
       # zizmor  # not in nixpkgs yet
