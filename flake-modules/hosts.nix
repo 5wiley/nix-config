@@ -47,7 +47,12 @@
         workmuxPackage = inputs.workmux.packages.${system}.default;
         crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
         worktrunkPackage = inputs.worktrunk.packages.${system}.default;
-        qmdPackage = inputs.qmd.packages.${system}.default;
+        qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
+          buildPhase = ''
+            export HOME=$(mktemp -d)
+            bun install
+          '';
+        });
         gwsPackage = inputs.gws.packages.${system}.gws;
         devenvPackage = inputs.devenv.packages.${system}.devenv;
       };
@@ -448,7 +453,12 @@
               workmuxPackage = inputs.workmux.packages.${system}.default;
               crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
               worktrunkPackage = inputs.worktrunk.packages.${system}.default;
-              qmdPackage = inputs.qmd.packages.${system}.default;
+              qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
+                buildPhase = ''
+                  export HOME=$(mktemp -d)
+                  bun install
+                '';
+              });
               gwsPackage = inputs.gws.packages.${system}.gws;
               devenvPackage = inputs.devenv.packages.${system}.devenv;
             };
