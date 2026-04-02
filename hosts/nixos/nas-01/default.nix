@@ -195,7 +195,8 @@ in {
     amdgpu_top
     python3Packages.huggingface-hub
     toolbox
-    inputs.llmfit.packages.${hostSpec.system}.default
+    # Tests require network access (GGUF model metadata fetching) which fails in nix sandbox
+    (inputs.llmfit.packages.${hostSpec.system}.default.overrideAttrs {doCheck = false;})
   ];
 
   services.clubcotton.harmonia = {
