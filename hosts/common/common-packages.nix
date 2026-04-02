@@ -45,7 +45,7 @@
       curl
       diffr # Modern Unix `diff`
       difftastic # Modern Unix `diff`
-      dig
+      dnsutils
       dua # Modern Unix `du`
       duf # Modern Unix `df`
       dust # Modern Unix `du`
