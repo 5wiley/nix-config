@@ -365,6 +365,13 @@ in {
       default = "";
       description = "Shell commands to run after a failed upgrade (e.g., alert notification).";
     };
+
+    timeoutSec = mkOption {
+      type = types.str;
+      default = "60min";
+      example = "120min";
+      description = "Systemd TimeoutStartSec for the upgrade service. Increase for hosts with long build times.";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -382,7 +389,7 @@ in {
       serviceConfig = {
         Type = "oneshot";
         ExecStart = upgradeScript;
-        TimeoutStartSec = "60min";
+        TimeoutStartSec = cfg.timeoutSec;
 
         # Logging
         StandardOutput = "journal+console";

@@ -46,6 +46,7 @@ in {
       enable = true;
       flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
       dates = "04:00";
+      timeoutSec = "120min"; # nas-01 builds many packages from source (open-webui, claude-code, beads, paperless-ngx)
       healthChecks = {
         pingTargets = ["192.168.5.1" "192.168.5.220"];
         services = ["sshd" "tailscaled" "postgresql" "forgejo"];
