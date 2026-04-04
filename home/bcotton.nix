@@ -632,6 +632,7 @@
     matchBlocks."*" = {
       extraOptions = {
         StrictHostKeyChecking = "no";
+        AddKeysToAgent = "yes";
       };
       forwardAgent = true;
     };
