@@ -86,6 +86,11 @@ fmt: install-hooks
 deploy +hostnames:
   #!/usr/bin/env bash
   set -euo pipefail
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "ERROR: 'just deploy' cannot be run from a darwin host."
+    echo "nixos-rebuild is not available on macOS. Run this from a NixOS host (e.g., admin) instead."
+    exit 1
+  fi
   for hostname in {{hostnames}}; do
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "Dry-activating $hostname..."
