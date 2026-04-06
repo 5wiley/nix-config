@@ -239,6 +239,23 @@ cd secrets && agenix -e service-name.age
 # Content: SERVICE_SECRET_KEY=<paste-generated-value>
 ```
 
+## Git Operations
+
+- When pushing to git remotes, always check SSH agent status and key availability first (`ssh-add -l`). If SSH push fails, do NOT retry repeatedly — report the issue and let the user handle auth.
+- When creating worktrees, use the project convention of `../<branch-name>` (sibling to `default/`), not in `/tmp/`. See existing worktrees with `git worktree list` for the convention.
+- Be careful not to modify `flake.lock` during investigation. Always check `git diff` before committing to ensure no accidental lock file changes.
+
+## APIs & Services
+
+- This project uses **Forgejo**, not GitHub. Use the Forgejo API via `./scripts/forgejo.sh` or direct API calls to `https://forgejo.bobtail-clownfish.ts.net/api/v1/repos/bcotton/nix-config/`. Do NOT use `gh` CLI or GitHub APIs.
+- Use `./scripts/forgejo.sh issue list`, `./scripts/forgejo.sh issue create`, etc. for issue management.
+
+## CI/CD Debugging
+
+- For CI/build failures, SSH into the runner machines to investigate directly rather than trying to fetch logs via web APIs.
+- Runner hosts: nix-01 (nix-01-runner-1, nix-01-runner-2), nix-03 (nix-03-runner-1, nix-03-runner-2).
+- Use `just ci logs <run-id>` or `just ci-analyze <run-id>` for quick log access.
+
 ## Development Notes
 
 - All configurations support both stable and unstable nixpkgs channels, this is setup in flake.nix
@@ -251,7 +268,6 @@ cd secrets && agenix -e service-name.age
   - Pre-commit hook runs `just fmt` to ensure all code is formatted before commit
   - No need to run 'just fmt', unless you want to syntax check the code
 - Don't forget to 'git add' new files before building with nix. This will save you an error step
-- **Git worktrees**: Create worktrees in `../<branch-name>` (sibling to `default/`), not in `/tmp`. See existing worktrees with `git worktree list` for the convention.
 - **ZFS dataset safety**: When adding or modifying a `zfsDataset` option in a service module, always run `just dry-activate <hostname>` (requires root) before deploying. Review the output for any destructive ZFS actions (dataset destroy/rollback). The disko-zfs module auto-detects pools and will **destroy undeclared datasets**, so verify no existing datasets are accidentally dropped.
 - **Auto-upgrade health checks**: When adding or modifying `healthChecks.extraScript` in a host's auto-upgrade config, ensure any commands used are available in PATH. The module provides a base set of common utilities (coreutils, gawk, gnugrep, gnused, findutils), but host-specific tools (e.g., `incus`) must be added via `healthChecks.extraScriptPackages`. Missing packages cause health checks to fail silently with "command not found", which triggers an automatic reboot to roll back. See `modules/auto-upgrade/default.nix` for the base path.
 - **Upgrade checklist**: Before upgrading NixOS releases, review `docs/UPGRADE_CHECKLIST.md` for workarounds that may need to be revisited (disabled exporters, replaced packages, etc.).
