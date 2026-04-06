@@ -239,6 +239,38 @@ in {
     openFirewall = true;
   };
 
+  # Daily infrastructure health report via Claude Code
+  systemd.services.infra-report = {
+    description = "Generate daily infrastructure health report via Claude Code";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    path = [pkgs.git pkgs.claude-code pkgs.curl pkgs.jq pkgs.openssh];
+
+    serviceConfig = {
+      Type = "oneshot";
+      User = "bcotton";
+      Group = "users";
+      WorkingDirectory = "/home/bcotton/nix-config/default";
+      TimeoutStartSec = "30min";
+      EnvironmentFile = "/home/bcotton/.config/sensitive/.claude-personal-env";
+      Environment = [
+        "HOME=/home/bcotton"
+        "CLAUDE_CONFIG_DIR=/home/bcotton/.claude-personal"
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
+      ];
+      ExecStart = "${pkgs.claude-code}/bin/claude -p '/infra-report' --allowedTools 'Bash,Read,Write,Grep,Glob,Edit,Agent' --dangerously-skip-permissions";
+    };
+  };
+
+  systemd.timers.infra-report = {
+    description = "Run daily infrastructure health report at 6am";
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnCalendar = "06:00";
+      Persistent = true;
+    };
+  };
+
   services.clubcotton.code-server = {
     tailnetHostname = "nix-01-vscode";
     user = "bcotton";
