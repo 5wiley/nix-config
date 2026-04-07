@@ -128,6 +128,18 @@ in {
         };
       };
     };
+
+    # CPU-only Ollama for embeddings — offloads from nas-01 GPU to avoid
+    # llama-swap model swap thrashing between chat and embedding models.
+    ollama = {
+      enable = true;
+      acceleration = false;
+      models = "/models/ollama";
+      environmentVariables = {
+        OLLAMA_NUM_PARALLEL = "4";
+        OLLAMA_MAX_LOADED_MODELS = "1";
+      };
+    };
   };
 
   # Configure distributed build fleet
@@ -200,6 +212,35 @@ in {
   };
 
   boot.zfs.extraPools = ["incus"];
+
+  # Declarative ZFS dataset for LLM models on the second SSD (incus pool / nvme1n1)
+  disko.zfs = {
+    enable = true;
+    # Ignore pool roots and all existing datasets — only manage incus/models
+    settings.ignoredDatasets = ["incus" "incus/buckets" "incus/buckets/*" "incus/containers" "incus/containers/*" "incus/custom" "incus/custom/*" "incus/deleted" "incus/deleted/*" "incus/images" "incus/images/*" "incus/virtual-machines" "incus/virtual-machines/*" "rpool" "rpool/*"];
+    settings.datasets = {
+      "incus/models" = {
+        properties = {
+          mountpoint = "/models";
+          compression = "lz4";
+          atime = "off";
+          quota = "50G";
+        };
+      };
+    };
+  };
+
+  # Create /models/ollama before ollama.service (ReadWritePaths requires it to exist)
+  systemd.services.ollama-models-dir = {
+    description = "Create Ollama models directory";
+    before = ["ollama.service"];
+    requiredBy = ["ollama.service"];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      ${pkgs.coreutils}/bin/mkdir -p /models/ollama
+      ${pkgs.coreutils}/bin/chmod 1777 /models/ollama
+    '';
+  };
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
