@@ -4,6 +4,7 @@
   lib,
   unstablePkgs,
   crushPackage,
+  localPackages,
   inputs,
   ...
 }: {
@@ -247,6 +248,9 @@
     # Nix tools
     nil # nix LSP
     alejandra # nix formatter
+
+    # Playwright
+    localPackages.playwright-cli
 
     # Fun
     cowsay
