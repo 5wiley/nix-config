@@ -36,12 +36,42 @@ groups:
 
       - record: llama:prompt_cache_hits:rate5m
         expr: |
-          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | unwrap batch_tokens | batch_tokens < 512 [5m])
+          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | batch_tokens < 512 [5m])
 
       - record: llama:prompt_full_evals:rate5m
         expr: |
-          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | unwrap batch_tokens | batch_tokens >= 512 [5m])
+          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | batch_tokens >= 512 [5m])
 
       - record: llama:model_unloads_by_model:rate5m
         expr: |
-          count_over_time({unit="llama-swap.service"} |= "Unloading model" | regexp "\\<(?P<model>[^>]+)\\> Unloading model" [5m])
+          count_over_time({unit="llama-swap.service"} |= "Unloading model" | regexp "<(?P<model>[^>]+)> Unloading model" [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "8192"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 8192 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "32768"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 32768 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "65536"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 65536 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "131072"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 131072 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "+Inf"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" [5m])

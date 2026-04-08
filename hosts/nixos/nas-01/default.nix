@@ -506,6 +506,14 @@ in {
           cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gte-Qwen2-1.5B-instruct-Q8_0.gguf --embeddings --pooling last -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
           ttl = 1800;
         };
+        "gemma-4-31b-it-f16" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-31B-it-f16.gguf --ctx-size 16384 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "gemma-4-26b-a4b-it-bf16" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-26B-A4B-it-BF16-00001-of-00002.gguf --ctx-size 262144 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
       };
     };
   };
