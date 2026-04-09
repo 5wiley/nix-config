@@ -408,6 +408,10 @@ in {
       enable = true;
       passwordFile = config.age.secrets."freshrss-database".path;
     };
+    honcho = {
+      enable = true;
+      passwordFile = config.age.secrets."honcho-database".path;
+    };
     paperless = {
       enable = true;
       passwordFile = config.age.secrets."paperless-database".path;

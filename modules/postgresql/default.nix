@@ -12,6 +12,7 @@ in {
     ./atuin.nix
     ./forgejo.nix
     ./freshrss.nix
+    ./honcho.nix
     ./immich.nix
     ./open-webui.nix
     ./paperless.nix

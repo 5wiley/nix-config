@@ -94,6 +94,18 @@ in {
     file = ./forgejo-dispatch-token.age;
   };
 
+  age.secrets."honcho-database" = lib.mkIf config.services.clubcotton.postgresql.honcho.enable {
+    file = ./honcho-database.age;
+    owner = "postgres";
+    group = "postgres";
+  };
+
+  age.secrets."honcho-database-raw" = lib.mkIf config.services.clubcotton.postgresql.honcho.enable {
+    file = ./honcho-database-raw.age;
+    owner = "root";
+    group = "root";
+  };
+
   age.secrets."immich-database" = lib.mkIf config.services.clubcotton.postgresql.enable {
     file = ./immich-database.age;
     owner = "postgres";

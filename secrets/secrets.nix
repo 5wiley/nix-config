@@ -49,6 +49,8 @@ in {
   # "garage-metrics-token.age".publicKeys = users ++ systems;
   "grafana-cloud.age".publicKeys = users ++ systems;
   "harmonia-signing-key.age".publicKeys = users ++ systems;
+  "honcho-database.age".publicKeys = users ++ systems;
+  "honcho-database-raw.age".publicKeys = users ++ systems;
   "homeassistant-token.age".publicKeys = users ++ systems;
   "immich-database.age".publicKeys = users ++ systems;
   "immich.age".publicKeys = users ++ systems;
