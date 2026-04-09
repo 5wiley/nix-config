@@ -44,6 +44,9 @@ in {
       extensions = ps: [ps.pgvector];
     };
 
+    services.clubcotton.postgresql.passwordFiles =
+      optional (cfg.honcho.passwordFile != null) cfg.honcho.passwordFile;
+
     services.clubcotton.postgresql.postStartCommands = let
       psql = "${lib.getExe' config.services.postgresql.package "psql"} -p ${toString cfg.port}";
       sqlFile = pkgs.writeText "honcho-setup.sql" ''

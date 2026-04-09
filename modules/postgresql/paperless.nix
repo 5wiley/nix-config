@@ -43,6 +43,9 @@ in {
       ];
     };
 
+    services.clubcotton.postgresql.passwordFiles =
+      optional (cfg.paperless.passwordFile != null) cfg.paperless.passwordFile;
+
     services.clubcotton.postgresql.postStartCommands = let
       psql = "${lib.getExe' config.services.postgresql.package "psql"} -p ${toString cfg.port}";
       sqlFile = pkgs.writeText "paperless-setup.sql" ''

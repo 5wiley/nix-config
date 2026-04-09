@@ -29,6 +29,13 @@ in {
       internal = true;
     };
 
+    passwordFiles = mkOption {
+      type = types.listOf types.path;
+      default = [];
+      description = "Password files that should trigger a re-run of postStartCommands when changed.";
+      internal = true;
+    };
+
     package = mkOption {
       type = types.package;
       default = pkgs.postgresql_16;
@@ -170,6 +177,7 @@ in {
           requires = ["postgresql.service"];
           wants = ["postgresql-setup.service"];
           wantedBy = ["multi-user.target"];
+          restartTriggers = cfg.passwordFiles;
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;

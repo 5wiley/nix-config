@@ -43,6 +43,9 @@ in {
       ];
     };
 
+    services.clubcotton.postgresql.passwordFiles =
+      optional (cfg.forgejo.passwordFile != null) cfg.forgejo.passwordFile;
+
     services.clubcotton.postgresql.postStartCommands = let
       psql = "${lib.getExe' config.services.postgresql.package "psql"} -p ${toString cfg.port}";
       sqlFile = pkgs.writeText "forgejo-setup.sql" ''

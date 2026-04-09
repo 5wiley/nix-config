@@ -48,6 +48,9 @@ in {
       extensions = ps: with ps; [vectorchord pgvector];
     };
 
+    services.clubcotton.postgresql.passwordFiles =
+      optional (cfg.immich.passwordFile != null) cfg.immich.passwordFile;
+
     services.clubcotton.postgresql.postStartCommands = let
       psql = "${lib.getExe' config.services.postgresql.package "psql"} -p ${toString cfg.port}";
       sqlFile = pkgs.writeText "immich-pgvectors-setup.sql" ''
