@@ -27,6 +27,7 @@ in {
 
   environment.systemPackages = with pkgs; [
     dolt
+    python3Packages.huggingface-hub
   ];
 
   # Incus cluster controller for clubcotton site
