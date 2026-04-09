@@ -680,8 +680,8 @@ in {
 
   networking.firewall = {
     enable = hostSpec.firewallEnable;
-    # CUPS printing, NFS, rpcbind
-    allowedTCPPorts = [631 2049 111];
+    # CUPS printing, NFS, rpcbind, postgres
+    allowedTCPPorts = [631 2049 111 5432];
     allowedUDPPorts = [631];
   };
   networking.hostId = hostSpec.hostId;
