@@ -119,6 +119,10 @@ in {
     # Override DynamicUser to use the static user declared above.
     # The preStart fixes ownership on state dirs that were previously owned
     # by a DynamicUser UID (one-time migration from DynamicUser=true).
+    #
+    # ExecStartPre also removes /homeless-shelter before each runner start as
+    # defense-in-depth against the tmpfiles rule below — guarantees a clean
+    # slate on every deploy/restart, not just at boot/activation.
     systemd.services = mapAttrs' (name: _:
       nameValuePair "gitea-runner-${name}" {
         serviceConfig = {
@@ -127,15 +131,21 @@ in {
           Group = "gitea-runner";
           ExecStartPre = mkForce [
             "+${pkgs.coreutils}/bin/chown -R gitea-runner:gitea-runner /var/lib/gitea-runner"
+            "+${pkgs.coreutils}/bin/rm -rf /homeless-shelter"
           ];
         };
       })
     cfg.instances;
 
-    # Clean up /homeless-shelter if it exists. Nix sets $HOME=/homeless-shelter
-    # during builds; without sandboxing, build scripts can mkdir it on the real
-    # filesystem, then the next build errors out detecting the stale directory.
-    systemd.tmpfiles.rules = ["R! /homeless-shelter - - - - -"];
+    # Clean up /homeless-shelter on every activation (not just boot). Nix sets
+    # $HOME=/homeless-shelter during builds; without sandboxing, build scripts
+    # can mkdir it on the real filesystem, then the next build errors out
+    # detecting the stale directory.
+    #
+    # Without the `!` suffix, systemd-tmpfiles-setup runs this rule on every
+    # `nixos-rebuild switch`, so deploys clean up any stale state without
+    # requiring a reboot.
+    systemd.tmpfiles.rules = ["R /homeless-shelter - - - - -"];
 
     # Open firewall if needed (runners initiate connections, usually not needed)
     # networking.firewall.allowedTCPPorts = [];
