@@ -132,6 +132,11 @@ in {
       })
     cfg.instances;
 
+    # Clean up /homeless-shelter if it exists. Nix sets $HOME=/homeless-shelter
+    # during builds; without sandboxing, build scripts can mkdir it on the real
+    # filesystem, then the next build errors out detecting the stale directory.
+    systemd.tmpfiles.rules = ["R! /homeless-shelter - - - - -"];
+
     # Open firewall if needed (runners initiate connections, usually not needed)
     # networking.firewall.allowedTCPPorts = [];
   };
