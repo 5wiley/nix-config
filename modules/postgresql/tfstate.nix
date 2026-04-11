@@ -43,6 +43,9 @@ in {
       ];
     };
 
+    services.clubcotton.postgresql.passwordFiles =
+      optional (cfg.tfstate.passwordFile != null) cfg.tfstate.passwordFile;
+
     services.clubcotton.postgresql.postStartCommands = let
       psql = "${lib.getExe' config.services.postgresql.package "psql"} -p ${toString cfg.port}";
       sqlFile = pkgs.writeText "tfstate-setup.sql" ''

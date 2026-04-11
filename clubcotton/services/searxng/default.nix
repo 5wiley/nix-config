@@ -70,7 +70,7 @@ in {
           port = cfg.port;
           bind_address = "0.0.0.0";
           secret_key = "@SEARXNG_SECRET@";
-          limiter = cfg.redisCreateLocally;
+          limiter = false;
           image_proxy = true;
         };
         search = {
