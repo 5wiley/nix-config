@@ -82,40 +82,6 @@
       };
     };
 
-  # tmux-powerkit requires runtime dependencies (uname, grep, awk, etc.)
-  # We wrap all shell scripts with the necessary PATH
-  tmux-powerkit = let
-    unwrapped = pkgs.tmuxPlugins.mkTmuxPlugin {
-      pluginName = "tmux-powerkit";
-      version = "head";
-      src = pkgs.fetchFromGitHub {
-        owner = "fabioluciano";
-        repo = "tmux-powerkit";
-        rev = "9d5bfdaabf2a03e05d8ae11f1065f694d15df0d5";
-        sha256 = "sha256-QhCUQDmt+Ur6KakrycJ4uvnIZzTHGkG/f01vslFxR5w=";
-      };
-    };
-    runtimeDeps = with pkgs; [coreutils gnugrep gawk gnused findutils];
-    runtimePath = lib.makeBinPath runtimeDeps;
-    wrapped = pkgs.runCommand "tmux-powerkit-wrapped" {} ''
-      cp -r ${unwrapped} $out
-      chmod -R +w $out
-
-      # Add PATH to all shell scripts
-      for f in $(find $out -name "*.sh" -o -name "*.tmux"); do
-        if [[ -f "$f" ]] && head -1 "$f" | grep -q "^#!.*bash"; then
-          sed -i '2i export PATH="${runtimePath}:$PATH"' "$f"
-        fi
-      done
-    '';
-  in
-    wrapped
-    // {
-      inherit (unwrapped) pname version meta;
-      rtp = "${wrapped}/share/tmux-plugins/tmux-powerkit/tmux-powerkit.tmux";
-      passthru = unwrapped.passthru or {};
-    };
-
   # Wrap tmux-resurrect to add a custom save command strategy that reads
   # the actual typed command from a tmux pane user option (@user-command),
   # set by a zsh preexec hook. Falls back to the default ps-based strategy.
@@ -189,7 +155,7 @@ in {
 
   config = lib.mkIf cfg.enable {
     _module.args = {
-      inherit tmux-window-name tmux-fzf-head tmux-nested tmux-fuzzback tmux-powerkit;
+      inherit tmux-window-name tmux-fzf-head tmux-nested tmux-fuzzback;
     };
 
     programs.tmux = {
@@ -228,14 +194,9 @@ in {
             set -g @resurrect-processes '"~claudep->claudep" "~claude->claude"'
           '';
         }
-        # NOTE: continuum is loaded via run-shell in extraConfig AFTER powerkit,
-        # because continuum hooks into status-right and powerkit overwrites it.
         extrakto
         {
           plugin = tmux-window-name;
-        }
-        {
-          plugin = tmux-powerkit;
         }
       ];
       extraConfig = lib.mkAfter ''
@@ -343,22 +304,10 @@ in {
         set -g @nested_inactive_status_style '#[fg=black,bg=red] #h #[bg=colour237,fg=colour241,nobold,noitalics,nounderscore]'
         set -g @nested_inactive_status_style_target 'status-left'
 
-        # tmux-powerkit configuration
-        set -g @powerkit_theme 'tokyo-night'
-        set -g @powerkit_theme_variant 'night'
-        set -g @powerkit_plugins 'datetime,battery,cpu,memory'
-        set -g @powerkit_session_icon 'auto'
-        set -g @powerkit_transparent 'true'
-        set -g @powerkit_options_key 'P'
-
         bind-key "C-f" run-shell -b "${tmux-fzf-head}/share/tmux-plugins/tmux-fzf/scripts/session.sh switch"
         run-shell ${tmux-nested}/share/tmux-plugins/tmux-nested/nested.tmux
         run-shell ${tmux-fuzzback}/share/tmux-plugins/tmux-fuzzback/fuzzback.tmux
-        run-shell ${tmux-powerkit}/share/tmux-plugins/tmux-powerkit/tmux-powerkit.tmux
 
-        # Continuum must load AFTER powerkit, because it prepends its auto-save
-        # script to status-right. If powerkit loads later, it overwrites status-right
-        # and the auto-save hook is lost.
         set -g @continuum-restore 'on'
         set -g @continuum-save-interval '15'
         run-shell ${pkgs.tmuxPlugins.continuum}/share/tmux-plugins/continuum/continuum.tmux
