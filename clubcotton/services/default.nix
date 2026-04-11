@@ -19,6 +19,7 @@
     ./freshrss
     ./garage
     ./harmonia
+    ./honcho
     ./homepage
     ./hyprland
     ./immich

@@ -34,6 +34,8 @@
       }
       # Linux-only packages
       // lib.optionalAttrs pkgs.stdenv.isLinux {
+        # honcho: AI agent memory and social cognition server
+        honcho = pkgs.callPackage ../pkgs/honcho {};
         # xdg-open-remote: Send URLs through SSH tunnel to open on remote desktop
         xdg-open-remote = pkgs.callPackage ../pkgs/xdg-open-remote {};
         # remote-copy: Send text through SSH tunnel to copy on remote desktop
@@ -54,7 +56,7 @@
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;
       }
       // lib.optionalAttrs pkgs.stdenv.isLinux {
-        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy;
+        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy honcho;
       };
   };
 }

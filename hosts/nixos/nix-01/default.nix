@@ -130,6 +130,8 @@ in {
       };
     };
 
+    honcho.enable = true;
+
     # CPU-only Ollama for embeddings — offloads from nas-01 GPU to avoid
     # llama-swap model swap thrashing between chat and embedding models.
     ollama = {
