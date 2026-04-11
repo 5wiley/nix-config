@@ -460,6 +460,9 @@ in {
             Group = "root";
             Restart = "always";
             RestartSec = "10s";
+            RuntimeDirectory = "restic-metrics";
+            RuntimeDirectoryPreserve = true;
+            RuntimeDirectoryMode = "0755";
           };
 
           script = let
@@ -475,7 +478,11 @@ in {
               REPO_NAME="${repo.name}"
               export RESTIC_REPOSITORY="${repo.repository}"
               export RESTIC_PASSWORD_FILE="${repo.passwordFile}"
-              ${optionalString (repo.environmentFile != null) "source ${repo.environmentFile}"}
+              ${optionalString (repo.environmentFile != null) ''
+                set -a
+                source ${repo.environmentFile}
+                set +a
+              ''}
               ${
                 optionalString (cfg.sshCommand != null && hasPrefix "sftp:" repo.repository)
                 ''export RESTIC_REPOSITORY_FILE="" && RESTIC_OPTS="-o sftp.command='${cfg.sshCommand} -s sftp'"''
@@ -527,8 +534,8 @@ in {
                 echo ""
 
                 ${concatMapStringsSep "\n" repoMetricsScript repoConfigs}
-              } > /tmp/restic_metrics.prom.tmp
-              mv /tmp/restic_metrics.prom.tmp /tmp/restic_metrics.prom
+              } > /run/restic-metrics/metrics.prom.tmp
+              mv /run/restic-metrics/metrics.prom.tmp /run/restic-metrics/metrics.prom
 
               sleep ${toString cfg.prometheusExporter.refreshInterval}
             done
@@ -560,7 +567,7 @@ in {
                 def do_GET(self):
                     if self.path == "/metrics":
                         try:
-                            with open("/tmp/restic_metrics.prom", "r") as f:
+                            with open("/run/restic-metrics/metrics.prom", "r") as f:
                                 content = f.read()
                             self.send_response(200)
                             self.send_header("Content-type", "text/plain; charset=utf-8")
