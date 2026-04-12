@@ -100,10 +100,10 @@ in {
     group = "postgres";
   };
 
-  age.secrets."honcho-database-raw" = lib.mkIf config.services.clubcotton.postgresql.honcho.enable {
+  age.secrets."honcho-database-raw" = lib.mkIf config.services.clubcotton.honcho.enable {
     file = ./honcho-database-raw.age;
-    owner = "root";
-    group = "root";
+    owner = "honcho";
+    group = "honcho";
   };
 
   age.secrets."immich-database" = lib.mkIf config.services.clubcotton.postgresql.enable {
