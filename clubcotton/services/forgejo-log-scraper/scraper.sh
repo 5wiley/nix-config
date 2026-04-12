@@ -7,7 +7,7 @@ LOG_BASE_DIR="${LOG_BASE_DIR:?LOG_BASE_DIR must be set}"
 LOKI_ENDPOINT="${LOKI_ENDPOINT:?LOKI_ENDPOINT must be set}"
 STATE_DIR="${STATE_DIR:?STATE_DIR must be set}"
 
-BATCH_SIZE="${BATCH_SIZE:-500}"
+BATCH_SIZE="${BATCH_SIZE:-200}"
 MAX_PARALLEL="${MAX_PARALLEL:-4}"
 DB_FILE="${STATE_DIR}/processed.db"
 
@@ -84,17 +84,21 @@ push_batch() {
   local response_file
   response_file=$(mktemp)
 
+  # Gzip the payload to stay well under Loki's HTTP body limits
+  gzip -f "$payload_file"
+
   local http_code
   http_code=$(curl -s -o "$response_file" -w '%{http_code}' \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "@${payload_file}" \
+    -H "Content-Encoding: gzip" \
+    --data-binary "@${payload_file}.gz" \
     "$LOKI_ENDPOINT") || {
     log "ERROR: curl failed for $batch_label"
-    rm -f "$payload_file" "$response_file"
+    rm -f "${payload_file}.gz" "$response_file"
     return 1
   }
-  rm -f "$payload_file"
+  rm -f "${payload_file}.gz"
 
   if [[ "$http_code" =~ ^2 ]]; then
     log "OK: pushed $batch_label (HTTP $http_code)"

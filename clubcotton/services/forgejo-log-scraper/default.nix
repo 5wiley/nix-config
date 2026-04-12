@@ -10,7 +10,7 @@ with lib; let
 
   scraperScript = pkgs.writeShellApplication {
     name = "forgejo-log-scraper";
-    runtimeInputs = with pkgs; [curl jq coreutils zstd inotify-tools findutils gnugrep gnused sqlite gawk];
+    runtimeInputs = with pkgs; [curl jq coreutils gzip zstd inotify-tools findutils gnugrep gnused sqlite gawk];
     text = builtins.readFile ./scraper.sh;
   };
 in {
