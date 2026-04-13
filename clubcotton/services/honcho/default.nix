@@ -154,7 +154,7 @@ in {
     databaseSecretFile = mkOption {
       type = types.path;
       default = config.age.secrets."honcho-database-raw".path;
-      description = "Path to file containing DB_CONNECTION_URI=postgresql+psycopg://...";
+      description = "Path to file containing CONNECTION_STRING=postgresql+psycopg://...";
     };
 
     # Authentication
@@ -270,12 +270,6 @@ in {
   };
 
   config = mkIf cfg.enable {
-    # Enable PostgreSQL with pgvector
-    services.clubcotton.postgresql.honcho = {
-      enable = true;
-      passwordFile = config.age.secrets."honcho-database".path;
-    };
-
     # Create service user
     users.users.honcho = {
       isSystemUser = true;
@@ -293,8 +287,9 @@ in {
     # Database migrations (runs once before API starts, re-runnable via systemctl)
     systemd.services.honcho-migrate = {
       description = "Honcho Database Migrations";
-      after = ["postgresql.service"];
-      requires = ["postgresql.service"];
+      after = ["network-online.target"] ++ optional config.services.postgresql.enable "postgresql.service";
+      requires = optional config.services.postgresql.enable "postgresql.service";
+      wants = ["network-online.target"];
 
       environment = commonEnv;
 

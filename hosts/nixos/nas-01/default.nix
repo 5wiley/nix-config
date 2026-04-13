@@ -416,6 +416,10 @@ in {
       enable = true;
       passwordFile = config.age.secrets."tfstate-database".path;
     };
+    honcho = {
+      enable = true;
+      passwordFile = config.age.secrets."honcho-database".path;
+    };
   };
 
   services.clubcotton.filebrowser = {
