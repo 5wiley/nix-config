@@ -10,6 +10,9 @@
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in {
   config = {
+    # Disable nix-darwin's Nix management — Determinate Nix manages its own daemon
+    nix.enable = false;
+
     system.primaryUser = hostSpec.primaryUser;
     users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
     ids.gids.nixbld = 30000;
@@ -144,7 +147,7 @@ in {
         # "Pages" = 409201541;
         "Tailscale" = 1475387142;
         "WiFi Explorer Lite" = 1408727408;
-        # "Windows App" = 1295203466;
+        # "Windows App" = 1295203266;
         "Xcode" = 497799835;
       };
     };

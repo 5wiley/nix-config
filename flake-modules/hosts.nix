@@ -5,6 +5,7 @@
 }: {
   flake = let
     inherit (inputs) nixpkgs nixpkgs-unstable home-manager agenix nix-darwin disko disko-zfs tsnsrv vscode-server nixos-generators nix-builder-config musnix;
+    inherit (nixpkgs) lib;
 
     # Package set generators
     genPkgs = system:
@@ -100,6 +101,7 @@
       tailscaleEnable = true;
       linuxBuilderEnable = false;
       desktopPackages = false;
+      determinateNix = false;
     };
 
     # NixOS host specifications - single source of truth for all NixOS hosts
@@ -418,55 +420,66 @@
       system,
       hostName,
       username,
+      determinateNix ? false,
     }: let
       pkgs = genPkgs system;
       unstablePkgs = genUnstablePkgs system;
-      hostSpec = hostDefaults // {primaryUser = username;};
+      hostSpec =
+        hostDefaults
+        // {
+          primaryUser = username;
+          inherit determinateNix;
+        };
     in
       nix-darwin.lib.darwinSystem {
         inherit system;
         specialArgs = {
           inherit self system inputs hostName hostSpec;
         };
-        modules = [
-          (mkModuleArgs unstablePkgs system)
-          ../overlays.nix
-          inputs.home-manager.darwinModules.home-manager
-          nix-builder-config.darwinModules.client
-          ../hosts/darwin/${hostName}
-          {
-            networking.hostName = hostName;
+        modules =
+          [
+            (mkModuleArgs unstablePkgs system)
+            ../overlays.nix
+            inputs.home-manager.darwinModules.home-manager
+          ]
+          # nix-builder-config sets nix.settings.substituters which conflicts with nix.enable = false
+          ++ lib.optionals (!determinateNix) [
+            nix-builder-config.darwinModules.client
+          ]
+          ++ [
+            ../hosts/darwin/${hostName}
+            {
+              networking.hostName = hostName;
 
-            # Enable nix cache client on all Darwin systems
-            # Settings come from nix-builder-config flake defaults
-            services.nix-builder.client.enable = true;
+              # Enable nix cache client on non-Determinate systems
+              services.nix-builder.client.enable = !determinateNix;
 
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.${username}.imports = [
-              ../home/${username}.nix
-              inputs.workmux.homeManagerModules.default
-            ];
-            home-manager.extraSpecialArgs = {
-              inherit inputs unstablePkgs hostName nixosHosts;
-              localPackages = self.legacyPackages.${system}.localPackages;
-              workmuxPackage = inputs.workmux.packages.${system}.default;
-              crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
-              worktrunkPackage = inputs.worktrunk.packages.${system}.default;
-              qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
-                buildPhase = ''
-                  export HOME=$(mktemp -d)
-                  bun install
-                '';
-              });
-              gwsPackage = inputs.gws.packages.${system}.gws;
-              devenvPackage = inputs.devenv.packages.${system}.devenv;
-            };
-          }
-          ../hosts/common/common-packages.nix
-          ../hosts/common/darwin-common.nix
-          ../users/${username}.nix
-        ];
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.${username}.imports = [
+                ../home/${username}.nix
+                inputs.workmux.homeManagerModules.default
+              ];
+              home-manager.extraSpecialArgs = {
+                inherit inputs unstablePkgs hostName nixosHosts;
+                localPackages = self.legacyPackages.${system}.localPackages;
+                workmuxPackage = inputs.workmux.packages.${system}.default;
+                crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
+                worktrunkPackage = inputs.worktrunk.packages.${system}.default;
+                qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
+                  buildPhase = ''
+                    export HOME=$(mktemp -d)
+                    bun install
+                  '';
+                });
+                gwsPackage = inputs.gws.packages.${system}.gws;
+                devenvPackage = inputs.devenv.packages.${system}.devenv;
+              };
+            }
+            ../hosts/common/common-packages.nix
+            ../hosts/common/darwin-common.nix
+            ../users/${username}.nix
+          ];
       };
   in {
     # Darwin configurations
@@ -490,6 +503,12 @@
         system = "x86_64-darwin";
         hostName = "bobs-imac";
         username = "bcotton";
+      };
+      bobs-work-laptop = darwinSystem {
+        system = "aarch64-darwin";
+        hostName = "bobs-work-laptop";
+        username = "bcotton";
+        determinateNix = true;
       };
     };
 
