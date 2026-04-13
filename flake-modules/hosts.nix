@@ -445,14 +445,12 @@
           # nix-builder-config sets nix.settings.substituters which conflicts with nix.enable = false
           ++ lib.optionals (!determinateNix) [
             nix-builder-config.darwinModules.client
+            {services.nix-builder.client.enable = true;}
           ]
           ++ [
             ../hosts/darwin/${hostName}
             {
               networking.hostName = hostName;
-
-              # Enable nix cache client on non-Determinate systems
-              services.nix-builder.client.enable = !determinateNix;
 
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
