@@ -75,13 +75,13 @@ in {
       # Keep only macOS-specific tools and those not in nixpkgs
       brews = [
         "bash" # system shell alternative
-        "borders" # macOS window borders (FelixKratz)
+        # "borders" # macOS window borders (FelixKratz)
         "jd" # JSON diff tool - not in nixpkgs
         "kube-fzf" # not in nixpkgs
         "mas" # Mac App Store CLI (needed by nix-darwin)
         "mods" # AI CLI tool
         "oh-my-posh" # shell prompt (complex integration)
-        "skhd" # macOS hotkey daemon
+        #"skhd" # macOS hotkey daemon
         "terminal-notifier" # macOS notifications
         "zizmor" # not in nixpkgs yet
       ];
@@ -146,7 +146,7 @@ in {
         # "Numbers" = 409203825;
         # "Pages" = 409201541;
         "Tailscale" = 1475387142;
-        "WiFi Explorer Lite" = 1408727408;
+        # "WiFi Explorer Lite" = 1408727408;
         # "Windows App" = 1295203266;
         "Xcode" = 497799835;
       };
