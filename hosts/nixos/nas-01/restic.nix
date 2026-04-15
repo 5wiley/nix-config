@@ -133,6 +133,11 @@
         extraBackupArgs = [
           "--exclude-caches"
           "--verbose"
+          # B2 lock cleanup is eventually-consistent; wait for prior lock to clear
+          "--retry-lock=5m"
+        ];
+        pruneOpts = [
+          "--retry-lock=5m"
         ];
       };
     };
