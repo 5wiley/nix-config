@@ -109,6 +109,12 @@
           enabledUsers = builtins.filter (user: config.home-manager.users.${user}.programs.arc-tab-archiver.enable or false) (builtins.attrNames config.home-manager.users);
           firstUser = builtins.head enabledUsers;
           userCfg = config.home-manager.users.${firstUser}.programs.arc-tab-archiver;
+          userHome = config.home-manager.users.${firstUser}.home.homeDirectory;
+          # launchd does not expand ~ in EnvironmentVariables, so resolve it here.
+          obsidianDir =
+            if lib.hasPrefix "~/" userCfg.obsidianDir
+            then "${userHome}/${lib.removePrefix "~/" userCfg.obsidianDir}"
+            else userCfg.obsidianDir;
         in {
           arc-tab-archiver = {
             serviceConfig = {
@@ -116,7 +122,7 @@
               StartInterval = userCfg.interval;
               RunAtLoad = true;
               EnvironmentVariables = {
-                OBSIDIAN_DIR = userCfg.obsidianDir;
+                OBSIDIAN_DIR = obsidianDir;
               };
               StandardOutPath = "/tmp/arc-tab-archiver.log";
               StandardErrorPath = "/tmp/arc-tab-archiver.log";
