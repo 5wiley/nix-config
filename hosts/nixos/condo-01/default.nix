@@ -35,6 +35,8 @@ in {
         tcpPorts = [
           {port = 22;}
         ];
+        # Remote host — not on the 192.168.5.0/24 LAN, so the default gateway ping target doesn't apply.
+        pingTargets = [];
       };
     };
   };
