@@ -189,7 +189,7 @@ in {
   environment.systemPackages = with pkgs; [
     beets
     dolt
-    restic
+    # restic is provided as a wrapper in restic.nix
     (unstablePkgs.llama-cpp.override {vulkanSupport = true;})
     vulkan-tools
     pciutils

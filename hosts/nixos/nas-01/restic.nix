@@ -11,7 +11,44 @@
 #    (Contents: B2_ACCOUNT_ID=xxx\nB2_ACCOUNT_KEY=xxx)
 # 2. Create B2 bucket: nas-01-restic-backup
 # 3. Uncomment the b2 repository section below
-{config, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: let
+  # Wrapper that auto-loads B2 credentials and repo password when run via sudo.
+  # The agenix secret files are root-only, so non-root invocations fall through
+  # to plain restic behavior. Defaults -r to the b2 repo when no -r is given.
+  resticWrapper = pkgs.writeShellScriptBin "restic" ''
+    set -euo pipefail
+
+    has_repo=0
+    for arg in "$@"; do
+      case "$arg" in
+        -r|--repo|--repo=*) has_repo=1; break ;;
+      esac
+    done
+
+    if [[ -r /run/agenix/restic-b2-env ]]; then
+      set -a
+      . /run/agenix/restic-b2-env
+      set +a
+    fi
+
+    if [[ -z "''${RESTIC_PASSWORD_FILE:-}" && -r /run/agenix/restic-password ]]; then
+      export RESTIC_PASSWORD_FILE=/run/agenix/restic-password
+    fi
+
+    if [[ $has_repo -eq 0 ]]; then
+      exec ${pkgs.restic}/bin/restic -r b2:nas-01-restic-backup "$@"
+    else
+      exec ${pkgs.restic}/bin/restic "$@"
+    fi
+  '';
+in {
+  # Install the wrapper as `restic` on PATH (shadows pkgs.restic here).
+  environment.systemPackages = [resticWrapper];
+
   # Configure SSH for rsync.net so restic init/check commands work
   # (The -o sftp.command option only applies to backup, not init)
   # Using connection multiplexing and aggressive keepalives to prevent timeouts
