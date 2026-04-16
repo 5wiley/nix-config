@@ -136,7 +136,7 @@ Following the `new-postgres-db` skill pattern:
     labels:
       severity: warning
     annotations:
-      description: 'Incus metrics scrape for deployment {{ $labels.deployment }} has been down for 5 minutes'
+      description: 'Incus metrics scrape for {{ $labels.instance }} has been down for 5 minutes'
   ```
 
 - **Leave unchanged** (subject to verification during implementation): recording rules `incus:instance_cpu_usage_ratio`, `incus:instance_memory_usage_ratio`, `incus:instance_filesystem_usage_ratio`; alerts `IncusInstanceHighMemory`, `IncusInstanceHighCPU`, `IncusInstanceFilesystemFull`, `IncusDaemonRestarted`, `IncusWarningsPresent`. All match on `incus_*` metric names that should still be present under native scrape. Verification step listed in "Implementation plan" below will confirm each metric still exists before deleting the collector.
