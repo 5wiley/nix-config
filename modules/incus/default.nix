@@ -5,7 +5,7 @@
   ...
 }: {
   imports = [
-    ./monitoring.nix
+    ./warnings-collector.nix
   ];
 
   networking.nftables.enable = true;
