@@ -55,6 +55,19 @@ in {
     group = "prometheus";
   };
 
+  age.secrets."prometheus-incus-cert" = lib.mkIf config.services.prometheus.enable {
+    file = ./prometheus-incus-cert.age;
+    owner = "prometheus";
+    group = "prometheus";
+  };
+
+  age.secrets."prometheus-incus-key" = lib.mkIf config.services.prometheus.enable {
+    file = ./prometheus-incus-key.age;
+    owner = "prometheus";
+    group = "prometheus";
+    mode = "0400";
+  };
+
   age.secrets."unpoller" = lib.mkIf config.services.unpoller.enable {
     file = ./unpoller.age;
     owner = "unifi-poller";
