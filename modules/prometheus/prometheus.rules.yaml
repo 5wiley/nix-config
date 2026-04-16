@@ -934,44 +934,8 @@ groups:
       description: "Tempo on {{ $labels.instance }} is encountering S3 storage errors at {{ printf \"%.1f\" $value }}/sec"
 
 # Incus Container/VM Monitoring
-- name: incus_recording_rules
-  interval: 30s
-  rules:
-    - record: incus:instance_cpu_usage_ratio
-      expr: sum by (name, project, instance) (rate(incus_cpu_seconds_total{mode!="idle"}[5m])) / sum by (name, project, instance) (rate(incus_cpu_seconds_total[5m]))
-
-    - record: incus:instance_memory_usage_ratio
-      expr: incus_memory_Active_bytes / incus_memory_MemTotal_bytes
-
-    - record: incus:instance_filesystem_usage_ratio
-      expr: 1 - (incus_filesystem_avail_bytes / incus_filesystem_size_bytes)
-
 - name: incus_alerts
   rules:
-  - alert: IncusInstanceHighMemory
-    expr: (incus_memory_Active_bytes / incus_memory_MemTotal_bytes) > 0.9
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      description: 'Incus instance {{ $labels.name }} on {{ $labels.instance }} memory usage above 90%'
-
-  - alert: IncusInstanceHighCPU
-    expr: incus:instance_cpu_usage_ratio > 0.9 and sum by (name, project, instance) (rate(incus_cpu_seconds_total[5m])) > 0.5
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: 'Incus instance {{ $labels.name }} on {{ $labels.instance }} CPU usage above 90% for 10 minutes'
-
-  - alert: IncusInstanceFilesystemFull
-    expr: (1 - (incus_filesystem_avail_bytes{mountpoint="/", fstype!="0x-1f0a1e1e"} / incus_filesystem_size_bytes{mountpoint="/", fstype!="0x-1f0a1e1e"})) > 0.9
-    for: 10m
-    labels:
-      severity: warning
-    annotations:
-      description: 'Incus instance {{ $labels.name }} on {{ $labels.instance }} root filesystem above 90% full'
-
   - alert: IncusDaemonRestarted
     expr: resets(incus_uptime_seconds[5m]) > 0
     for: 1m
@@ -1045,10 +1009,10 @@ groups:
     annotations:
       description: 'AMD GPU metrics collector on {{ $labels.instance }} has not updated for over 2 minutes'
 
-  - alert: IncusMetricsStale
-    expr: (time() - node_textfile_mtime_seconds{file="incus.prom"}) > 60
+  - alert: IncusScrapeDown
+    expr: up{job="incus"} == 0
     for: 5m
     labels:
       severity: warning
     annotations:
-      description: 'Incus metrics collector on {{ $labels.instance }} has not updated for over 60 seconds'
+      description: 'Incus metrics scrape for {{ $labels.instance }} has been down for 5 minutes'
