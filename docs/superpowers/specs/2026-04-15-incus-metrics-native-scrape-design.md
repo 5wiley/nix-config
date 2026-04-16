@@ -37,10 +37,13 @@ Problems:
 
 ## Topology
 
-- **Cluster:** nix-01, nix-02, nix-03, nas-01 — one incus cluster. The `modules/incus` import list currently shows `nas-01`, `nix-03`, `nix-04`, `incus-testing`, which does not match this topology; discrepancy is flagged for resolution during implementation but does not affect the scrape design.
+- **Cluster:** nix-01, nix-02, nix-03, nas-01 — one incus cluster.
 - **Standalone:** condo-01, natalya-01.
+- **Testing:** incus-testing, nix-04 — not currently part of the scrape plan; their state is a loose end to resolve during implementation. They still import `modules/incus` and will have the textfile collector deleted along with everyone else.
 
-Three scrape targets total: one cluster member, condo-01, natalya-01.
+Hosts currently importing `modules/incus` (all 8 — confirmed by grep): nas-01, nix-01, nix-02, nix-03, nix-04, condo-01, natalya-01, incus-testing. Every one of them gets the collector deletion deployed.
+
+Three scrape targets total in the new world: one cluster member (nas-01), condo-01, natalya-01.
 
 ## Design
 
@@ -61,16 +64,18 @@ Add a single `incus` scrape job in `modules/prometheus/default.nix`:
     insecure_skip_verify = true; # incus presents its own self-signed cert
   };
   static_configs = [
-    { targets = ["nas-01.lan:8443"]; labels = { deployment = "nix-cluster"; }; }
-    { targets = ["condo-01.lan:8443"]; labels = { deployment = "condo-01"; }; }
-    { targets = ["natalya-01.lan:8443"]; labels = { deployment = "natalya-01"; }; }
+    { targets = ["nas-01.lan:8443"]; }
+    { targets = ["condo-01.lan:8443"]; }
+    { targets = ["natalya-01.lan:8443"]; }
   ];
-  metric_relabel_configs = [
-    # Normalize the 'instance' label so cluster-wide metrics don't carry
-    # whichever member happened to answer the scrape.
+  relabel_configs = [
+    # Replace the default host:port instance label with a bare hostname,
+    # so queries and dashboards can match on 'nas-01' not 'nas-01.lan:8443'.
     {
-      source_labels = ["deployment"];
+      source_labels = ["__address__"];
+      regex = "([^.:]+)(\\..*)?:[0-9]+";
       target_label = "instance";
+      replacement = "\${1}";
     }
   ];
 }
@@ -79,8 +84,8 @@ Add a single `incus` scrape job in `modules/prometheus/default.nix`:
 Notes:
 
 - One target per deployment. Native `/1.0/metrics` returns cluster-wide data, so scraping one cluster member is sufficient. If `nas-01` is down, the cluster's metrics go stale for that scrape cycle — acceptable given we already page on `up{job="incus"} == 0`.
-- `insecure_skip_verify = true` skips verifying the *server* certificate (incus's self-signed TLS cert). Client authentication still uses the real client cert. If the server cert is ever rotated via a known CA, this can be tightened.
-- Using `metric_relabel_configs` to promote a `deployment` label to `instance` gives stable, predictable instance values that don't depend on which cluster member answered.
+- `insecure_skip_verify = true` skips verifying the *server* certificate (incus's self-signed TLS cert). Client authentication still uses the real client cert. If the server cert is ever rotated via a known CA, this can be tightened (see "Out of scope").
+- `instance` ends up as `nas-01`, `condo-01`, `natalya-01`. This is a **breaking change** to the label value: the textfile-collector pipeline set `instance` to whichever cluster member's node-exporter happened to produce the metrics, so existing queries that filter on `instance=~"nix-0[1-4]"` will stop matching cluster data. See Risks.
 
 ### Secrets
 
@@ -115,7 +120,7 @@ Following the `new-postgres-db` skill pattern:
 
 - Delete `modules/incus/monitoring.nix` entirely.
 - Remove `./monitoring.nix` from `modules/incus/default.nix`'s `imports`.
-- The tmpfiles rule for `/var/lib/prometheus-node-exporter-text-files` does not need to be preserved — `modules/zfs/monitoring.nix` already declares it on the hosts that need it, and hosts without the zfs collector don't need the directory.
+- Verify the tmpfiles rule for `/var/lib/prometheus-node-exporter-text-files` is not orphaned. The node-exporter textfile collector module itself may declare it, and other collectors (`modules/zfs/monitoring.nix`, amdgpu) may also declare it. Implementation step: grep for other declarations before removing the rule from the incus module. If incus's copy is the only one on any host (unlikely but possible for condo-01 or natalya-01 which may not run zfs collectors), add a dedicated tmpfiles rule to a module that always runs on those hosts, or simply let the node-exporter service create the dir.
 
 ### Alert and rule updates
 
@@ -140,9 +145,11 @@ Following the `new-postgres-db` skill pattern:
 
 Decided at implementation time after inspecting the live `/1.0/metrics` output on the current incus version:
 
-1. **Native exposes `incus_warnings` with severity label** → drop the bash-computed version, `IncusWarningsPresent` alert unchanged (it already matches by severity label).
-2. **Native exposes `incus_warnings_total` with severity label** → add a recording rule `incus_warnings = incus_warnings_total`, keep `IncusWarningsPresent` unchanged.
-3. **Native doesn't expose it or lacks severity** → keep a minimal textfile collector (a new 15-line `modules/incus/warnings-collector.nix`) that writes *only* `incus_warnings{severity=...}` and nothing else. This preserves the alert without reintroducing the full bash pipeline. The collector would be gated on `config.virtualisation.incus.enable` like the current one but with a much smaller blast radius.
+1. **Native exposes `incus_warnings` as a gauge with severity label** → drop the bash-computed version. `IncusWarningsPresent` alert (`incus_warnings{severity!="low"} > 0`) is unchanged.
+2. **Native exposes it under a different name (e.g. `incus_cluster_warnings_count` or similar) as a gauge** → update `IncusWarningsPresent` to match the real metric name and label set.
+3. **Native doesn't expose anything gauge-shaped for warnings** → keep a minimal textfile collector (`modules/incus/warnings-collector.nix`, ~15 lines) that writes *only* `incus_warnings{severity=...}`. Gated on `config.virtualisation.incus.enable` like the current one, deployed on one cluster member + the two standalones rather than all 8 hosts — this removes the cluster duplication even for the fallback path.
+
+Note: a counter named `incus_warnings_total` is **not** an acceptable substitute for a gauge, since the existing `IncusWarningsPresent` alert expects a value that goes back to zero when warnings clear. Do not attempt to derive the gauge from a counter.
 
 ## Secrets workflow (user-executed, out-of-band)
 
@@ -154,14 +161,24 @@ openssl req -x509 -newkey ec:<(openssl ecparam -name prime256v1) \
   -nodes -days 3650 -subj '/CN=prometheus' \
   -keyout /tmp/prom-incus.key -out /tmp/prom-incus.crt
 
-# Encrypt into the repo
-(cd secrets && agenix -e prometheus-incus-cert.age) < /tmp/prom-incus.crt
-(cd secrets && agenix -e prometheus-incus-key.age) < /tmp/prom-incus.key
+# Encrypt into the repo. agenix -e opens $EDITOR on the decrypted file —
+# override EDITOR so it just drops the plaintext file in place, then
+# agenix re-encrypts it. Do NOT pipe via stdin; agenix -e does not read stdin.
+cd secrets
+EDITOR="cp /tmp/prom-incus.crt" agenix -e prometheus-incus-cert.age
+EDITOR="cp /tmp/prom-incus.key" agenix -e prometheus-incus-key.age
+cd ..
 
-# Trust on each incus deployment (run once per deployment)
-cat /tmp/prom-incus.crt | ssh nas-01 'incus config trust add-certificate --name prometheus --type client -'
-cat /tmp/prom-incus.crt | ssh condo-01 'incus config trust add-certificate --name prometheus --type client -'
-cat /tmp/prom-incus.crt | ssh natalya-01 'incus config trust add-certificate --name prometheus --type client -'
+# Trust on each incus deployment (run once per deployment).
+# Verify the exact 'incus config trust add-certificate' flag set on the
+# current incus version before running — newer versions accept --type client
+# and a path argument; older versions may differ.
+scp /tmp/prom-incus.crt nas-01:/tmp/
+ssh nas-01 'incus config trust add-certificate /tmp/prom-incus.crt --name prometheus && rm /tmp/prom-incus.crt'
+scp /tmp/prom-incus.crt condo-01:/tmp/
+ssh condo-01 'incus config trust add-certificate /tmp/prom-incus.crt --name prometheus && rm /tmp/prom-incus.crt'
+scp /tmp/prom-incus.crt natalya-01:/tmp/
+ssh natalya-01 'incus config trust add-certificate /tmp/prom-incus.crt --name prometheus && rm /tmp/prom-incus.crt'
 
 shred -u /tmp/prom-incus.key /tmp/prom-incus.crt
 ```
@@ -170,7 +187,7 @@ The implementer waits for the user to confirm completion before resuming the bui
 
 ## Implementation plan (high level)
 
-1. **Verify native endpoint contents.** SSH to `nas-01`, run `curl --cert /path --key /path https://localhost:8443/1.0/metrics`. Catalog which metric names exist. Cross-reference against every metric used in `prometheus.rules.yaml` lines 937–1049. Decide the `incus_warnings` path.
+1. **Verify native endpoint contents.** SSH to `nas-01`, run `curl --cert /path --key /path https://localhost:8443/1.0/metrics`. Catalog which metric names *and their label sets* exist. Cross-reference against every metric used in `prometheus.rules.yaml` lines 937–1049, paying particular attention to label names referenced in `sum by (...)` clauses (`name`, `project`, `instance`, `mountpoint`, `fstype`). If any label the recording rules group by is missing, either the rules need updating or that rule is broken under native scrape. Decide the `incus_warnings` path.
 2. **Add secret declarations** to `secrets/secrets.nix`.
 3. **Add secret activation** to `secrets/default.nix` (gated on `services.prometheus.enable`).
 4. **STOP for secrets creation.** User generates keypair, encrypts via agenix, trusts on each deployment.
@@ -184,10 +201,12 @@ The implementer waits for the user to confirm completion before resuming the bui
 
 ## Risks and mitigations
 
+- **`instance` label semantics change.** Post-migration, `incus_*` metrics carry `instance` values `nas-01`/`condo-01`/`natalya-01`. Previously they carried whichever cluster member's node-exporter had produced the textfile — almost always one of nix-01..nix-04 or nas-01. Any saved Grafana query, dashboard variable, or ad-hoc alert filtering `instance=~"nix-0[1-4]"` on incus metrics will silently stop matching cluster data. Mitigation: grep `clubcotton/`, `modules/grafana/`, and any dashboard JSON in the repo for `instance=.*nix-0` in incus contexts before cutover; audit Grafana dashboards manually during verification (step 7).
 - **Cluster target goes down.** Scraping a single cluster member means metrics for the whole cluster disappear if that one host is down. Mitigated by `IncusScrapeDown` firing within 5 minutes. Acceptable because (a) incus cluster outages are already paged elsewhere, (b) we're not making reliability worse than the textfile collector, which would also fail if the incus daemon on a host was down.
-- **Metric shape change.** The native endpoint may produce slightly different label sets than what flowed through the textfile collector (e.g., `project` labels that weren't in the scraped version, or missing labels the collector was adding). Mitigated by the verify-before-delete step (step 1 and step 7) — we compare the native output against what recording rules consume before removing the collector.
+- **Metric shape change beyond `instance`.** The native endpoint may produce different label sets than the textfile-scraped version (missing `project`, added labels the collector was stripping, etc.). Mitigated by step 1's catalog of metric names *and label sets*, cross-referenced against the `sum by (...)` clauses in existing recording rules before the collector is deleted.
 - **`incus_warnings` path unknown until implementation.** Mitigated by deciding at step 1 with a live check, and by having a fallback (minimal collector) that preserves the alert even in the worst case.
 - **Self-signed server cert.** `insecure_skip_verify = true` skips server verification. Prometheus still authenticates with a strong client cert, but a MITM attacker on the internal network could observe scrape requests. Acceptable in this trust domain.
+- **Gap window during cutover.** Between deploying the collector deletion and deploying the new scrape job, there is a window with no incus metrics. Mitigation: implementation plan orders deploy-admin-with-scrape *before* deploy-collector-deletion (steps 7 then 8/9), so the scrape is working before the old source is removed.
 
 ## Testing
 
