@@ -296,6 +296,31 @@ in {
             }
           ];
         }
+        {
+          job_name = "incus";
+          scheme = "https";
+          metrics_path = "/1.0/metrics";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          tls_config = {
+            cert_file = config.age.secrets."prometheus-incus-cert".path;
+            key_file = config.age.secrets."prometheus-incus-key".path;
+            insecure_skip_verify = true;
+          };
+          static_configs = [
+            {targets = ["nas-01.lan:8443"];}
+            {targets = ["condo-01.lan:8443"];}
+            {targets = ["natalya-01.lan:8443"];}
+          ];
+          relabel_configs = [
+            {
+              source_labels = ["__address__"];
+              regex = "([^.:]+)(\\..*)?:[0-9]+";
+              target_label = "instance";
+              replacement = "\${1}";
+            }
+          ];
+        }
       ]
       ++ scrapeConfigs.autogenScrapeConfigs;
   };
