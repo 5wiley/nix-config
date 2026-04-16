@@ -212,6 +212,9 @@ in {
                 # Tempo /ready health check
                 targets = ["https://tempo${promLib.tailscaleDomain}/ready"];
               }
+              {
+                targets = ["https://honcho${promLib.tailscaleDomain}/health"];
+              }
             ];
           relabel_configs = [
             {
