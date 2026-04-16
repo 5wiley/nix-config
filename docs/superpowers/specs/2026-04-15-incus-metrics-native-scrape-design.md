@@ -139,17 +139,17 @@ Following the `new-postgres-db` skill pattern:
       description: 'Incus metrics scrape for {{ $labels.instance }} has been down for 5 minutes'
   ```
 
-- **Leave unchanged** (subject to verification during implementation): recording rules `incus:instance_cpu_usage_ratio`, `incus:instance_memory_usage_ratio`, `incus:instance_filesystem_usage_ratio`; alerts `IncusInstanceHighMemory`, `IncusInstanceHighCPU`, `IncusInstanceFilesystemFull`, `IncusDaemonRestarted`, `IncusWarningsPresent`. All match on `incus_*` metric names that should still be present under native scrape. Verification step listed in "Implementation plan" below will confirm each metric still exists before deleting the collector.
+- **Remove dead recording rules and alerts** (verified 2026-04-15): the per-instance metrics `incus_cpu_seconds_total`, `incus_memory_Active_bytes`, `incus_memory_MemTotal_bytes`, `incus_filesystem_avail_bytes`, `incus_filesystem_size_bytes` have **never been exposed** by `/1.0/metrics` — not via the native HTTPS endpoint and not via the unix socket that the textfile collector uses. The current `.prom` file on nas-01 confirms zero matches. Consequently:
+  - Recording rules `incus:instance_cpu_usage_ratio`, `incus:instance_memory_usage_ratio`, `incus:instance_filesystem_usage_ratio` have always produced empty results. **Delete them.**
+  - Alerts `IncusInstanceHighMemory`, `IncusInstanceHighCPU`, `IncusInstanceFilesystemFull` have never fired. **Delete them.**
+- **Keep** `IncusDaemonRestarted` (`resets(incus_uptime_seconds[5m]) > 0`) — `incus_uptime_seconds` is present on the native endpoint.
+- **Keep** `IncusWarningsPresent` (`incus_warnings{severity!="low"} > 0`) — fed by the minimal warnings collector (see below).
 
 ### The `incus_warnings` metric
 
-Decided at implementation time after inspecting the live `/1.0/metrics` output on the current incus version:
+**Resolved (2026-04-15):** Path 3. Native `/1.0/metrics` only exposes `incus_warnings_total` — a counter with no severity label. The textfile collector's custom `incus_warnings{severity=...}` gauge is the only source for per-severity breakdown.
 
-1. **Native exposes `incus_warnings` as a gauge with severity label** → drop the bash-computed version. `IncusWarningsPresent` alert (`incus_warnings{severity!="low"} > 0`) is unchanged.
-2. **Native exposes it under a different name (e.g. `incus_cluster_warnings_count` or similar) as a gauge** → update `IncusWarningsPresent` to match the real metric name and label set.
-3. **Native doesn't expose anything gauge-shaped for warnings** → keep a minimal textfile collector (`modules/incus/warnings-collector.nix`, ~15 lines) that writes *only* `incus_warnings{severity=...}`. Gated on `config.virtualisation.incus.enable` like the current one, deployed on one cluster member + the two standalones rather than all 8 hosts — this removes the cluster duplication even for the fallback path.
-
-Note: a counter named `incus_warnings_total` is **not** an acceptable substitute for a gauge, since the existing `IncusWarningsPresent` alert expects a value that goes back to zero when warnings clear. Do not attempt to derive the gauge from a counter.
+**Decision:** Keep a minimal textfile collector (`modules/incus/warnings-collector.nix`) that writes *only* `incus_warnings{severity=...}`. Gated on `config.virtualisation.incus.enable`, deployed on all hosts that import `modules/incus` (simpler than trying to pick one per deployment).
 
 ## Secrets workflow (user-executed, out-of-band)
 
