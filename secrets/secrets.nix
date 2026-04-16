@@ -69,6 +69,8 @@ in {
   "paperless.age".publicKeys = users ++ systems;
   "paperless-database.age".publicKeys = users ++ systems;
   "paperless-database-raw.age".publicKeys = users ++ systems;
+  "prometheus-incus-cert.age".publicKeys = users ++ systems;
+  "prometheus-incus-key.age".publicKeys = users ++ systems;
   "pushover-key.age".publicKeys = users ++ systems;
   "pushover-token.age".publicKeys = users ++ systems;
   "redis-password.age".publicKeys = users ++ systems;
