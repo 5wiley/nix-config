@@ -55,6 +55,7 @@
           '';
         });
         gwsPackage = inputs.gws.packages.${system}.gws;
+        fjPackage = inputs.fj.packages.${system}.fj;
         devenvPackage = inputs.devenv.packages.${system}.devenv;
       };
     };
@@ -471,6 +472,7 @@
                   '';
                 });
                 gwsPackage = inputs.gws.packages.${system}.gws;
+                fjPackage = inputs.fj.packages.${system}.fj;
                 devenvPackage = inputs.devenv.packages.${system}.devenv;
               };
             }

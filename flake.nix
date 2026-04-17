@@ -87,6 +87,11 @@
       url = "github:googleworkspace/cli";
     };
 
+    fj = {
+      url = "git+ssh://forgejo@nas-01:2222/bcotton/fj.git";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
     llmfit = {
       url = "github:AlexsJones/llmfit";
       inputs.nixpkgs.follows = "nixpkgs";
