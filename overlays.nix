@@ -13,6 +13,33 @@
       bird = prev.bird2;
     })
 
+    # direnv 2.37.1 has broken fish tests in nixpkgs - skip checks until fixed upstream
+    (final: prev: {
+      direnv = prev.direnv.overrideAttrs (old: {
+        doCheck = false;
+      });
+    })
+
+    # jetbrains-mono build-from-source fails on darwin (ffmpeg-python test crash)
+    # Use pre-built fonts from GitHub release instead
+    (final: prev: {
+      jetbrains-mono = prev.jetbrains-mono.overrideAttrs (old: {
+        nativeBuildInputs = [];
+        buildPhase = ''
+          runHook preBuild
+          runHook postBuild
+        '';
+        installPhase = ''
+          runHook preInstall
+          install -Dm644 -t "$out/share/fonts/opentype/" fonts/otf/*.otf
+          install -Dm644 -t "$out/share/fonts/truetype/" fonts/ttf/*.ttf
+          install -Dm644 -t "$out/share/fonts/truetype/" fonts/variable/*.ttf
+          install -Dm644 -t "$out/share/fonts/WOFF2/" fonts/webfonts/*.woff2
+          runHook postInstall
+        '';
+      });
+    })
+
     # nix-openclaw overlay - provides pkgs.moltbot
     inputs.nix-openclaw.overlays.default
 
