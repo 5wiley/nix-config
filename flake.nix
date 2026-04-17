@@ -88,7 +88,7 @@
     };
 
     fj = {
-      url = "git+ssh://forgejo@nas-01:2222/bcotton/fj.git";
+      url = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/fj.git";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 

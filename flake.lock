@@ -420,11 +420,11 @@
         "rev": "c181a3e0f990d63cee67574dfd396201326d3461",
         "revCount": 22,
         "type": "git",
-        "url": "ssh://forgejo@nas-01:2222/bcotton/fj.git"
+        "url": "https://forgejo.bobtail-clownfish.ts.net/bcotton/fj.git"
       },
       "original": {
         "type": "git",
-        "url": "ssh://forgejo@nas-01:2222/bcotton/fj.git"
+        "url": "https://forgejo.bobtail-clownfish.ts.net/bcotton/fj.git"
       }
     },
     "flake-compat": {
