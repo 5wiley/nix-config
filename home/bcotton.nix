@@ -180,6 +180,7 @@
   programs.mise = {
     enable = true;
     enableZshIntegration = true;
+    package = unstablePkgs.mise;
   };
 
   programs.direnv = {
@@ -738,7 +739,6 @@
       golangci-lint
       bun
       nodejs_24
-      mise
       shellcheck
       tea
       yarn-berry

@@ -37,7 +37,6 @@
       # K8s development tools
       ctlptl
       unstablePkgs.tilt
-      unstablePkgs.mise
       kind
 
       coreutils
