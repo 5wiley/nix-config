@@ -9,14 +9,14 @@
   # Update with: ./scripts/upgrade-claude-code.sh
   claude-code = unstablePkgs.buildNpmPackage (finalAttrs: {
     pname = "claude-code";
-    version = "2.1.101";
+    version = "2.1.111";
 
     src = unstablePkgs.fetchzip {
       url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-      hash = "sha256-nPdrFc7RiVuKVHE7ycCzIoCZN/fdgwjbEcTULennchU=";
+      hash = "sha256-K3qhZXVJ2DIKv7YL9f/CHkuUYnK0lkIR1wjEa+xeSCk=";
     };
 
-    npmDepsHash = "sha256-IR7yWhQ4KcdH762ryL6pUjPskdO1IABLxh+82/Ki3tY=";
+    npmDepsHash = "sha256-T+CAUyo82wU3Z5F+1k59rlV+3CHDtT9iA4vFeSVLB9U=";
 
     strictDeps = true;
 

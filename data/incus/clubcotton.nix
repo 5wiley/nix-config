@@ -16,7 +16,6 @@
     };
     extraConfig = {
       "migration.stateful" = "true";
-      "boot.autostart" = "true";
     };
   };
 

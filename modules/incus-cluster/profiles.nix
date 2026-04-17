@@ -120,9 +120,6 @@ with lib; let
       cpu = 4;
       memory = "8GiB";
       diskSize = "64GiB";
-      extraConfig = {
-        "boot.autostart" = "true";
-      };
     };
 
     ephemeral = {

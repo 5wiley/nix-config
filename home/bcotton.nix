@@ -11,6 +11,7 @@
   worktrunkPackage,
   qmdPackage,
   gwsPackage,
+  fjPackage,
   devenvPackage,
   inputs,
   ...
@@ -667,7 +668,6 @@
       claude-code
       devenvPackage
       docker-compose
-      forgejo-cli
       fx
       google-cloud-sdk
       kubernetes-helm
@@ -712,6 +712,7 @@
       crushPackage
       worktrunkPackage
       gwsPackage
+      fjPackage
     ]
     ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       qmdPackage

@@ -18,6 +18,7 @@ os.environ["CLAUDE_INVOKED_BY"] = "memory_flush"
 import asyncio
 import json
 import logging
+import shutil
 import sys
 import time
 from datetime import datetime, timezone
@@ -117,10 +118,12 @@ respond with exactly: FLUSH_OK
     response = ""
 
     try:
+        cli = shutil.which("claudep")
         async for message in query(
             prompt=prompt,
             options=ClaudeAgentOptions(
                 cwd=str(ROOT),
+                cli_path=cli,
                 allowed_tools=[],
                 max_turns=2,
             ),
