@@ -214,8 +214,8 @@ in {
   # See https://xeiaso.net/blog/prometheus-grafana-loki-nixos-2020-11-20/
   # Turn on node_exporter
   services.prometheus = {
-    # Exclude webdav service from blackbox monitoring
-    tsnsrvExcludeList = ["webdav" "loki" "tempo"];
+    # Exclude services from auto-generated root-path blackbox probes (custom paths added manually)
+    tsnsrvExcludeList = ["webdav" "loki" "tempo" "honcho"];
 
     exporters = {
     };
