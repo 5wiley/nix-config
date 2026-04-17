@@ -43,77 +43,6 @@ check_deps() {
   fi
 }
 
-# ---------- Forgejo config resolution ----------
-
-TEA_CONFIG="${HOME}/.config/tea/config.yml"
-
-resolve_forgejo_config() {
-  if [[ -n "${FORGEJO_TOKEN:-}" ]]; then
-    TOKEN="$FORGEJO_TOKEN"
-  elif [[ -f "$TEA_CONFIG" ]]; then
-    TOKEN=$(yq -r '.logins[0].token' "$TEA_CONFIG")
-    if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
-      log_error "could not extract token from $TEA_CONFIG"
-      log_error "run 'tea login add' or set FORGEJO_TOKEN"
-      exit 1
-    fi
-  else
-    log_error "no FORGEJO_TOKEN set and tea config not found at $TEA_CONFIG"
-    log_error "either: tea login add  OR  export FORGEJO_TOKEN=..."
-    exit 1
-  fi
-
-  if [[ -n "${FORGEJO_URL:-}" ]]; then
-    BASE_URL="$FORGEJO_URL"
-  elif [[ -f "$TEA_CONFIG" ]]; then
-    BASE_URL=$(yq -r '.logins[0].url' "$TEA_CONFIG")
-  else
-    log_error "no FORGEJO_URL set and tea config not found"
-    exit 1
-  fi
-  BASE_URL="${BASE_URL%/}"
-
-  if [[ -n "${FORGEJO_REPO:-}" ]]; then
-    REPO="$FORGEJO_REPO"
-  else
-    local remote
-    remote=$(git remote get-url origin 2>/dev/null || true)
-    if [[ -n "$remote" ]]; then
-      REPO=$(echo "$remote" | sed -E 's#^(ssh://[^/]+/|https?://[^/]+/|[^@]+@[^:]+:)##; s/\.git$//')
-    else
-      log_error "could not detect repo from git remote; set FORGEJO_REPO"
-      exit 1
-    fi
-  fi
-}
-
-# ---------- API helpers ----------
-
-api_get() {
-  local endpoint="$1"
-  curl -sf -H "Authorization: token $TOKEN" "${BASE_URL}/api/v1/${endpoint}"
-}
-
-api_post() {
-  local endpoint="$1"
-  local data="$2"
-  curl -sf -X POST \
-    -H "Authorization: token $TOKEN" \
-    -H "Content-Type: application/json" \
-    "${BASE_URL}/api/v1/${endpoint}" \
-    -d "$data"
-}
-
-api_patch() {
-  local endpoint="$1"
-  local data="$2"
-  curl -sf -X PATCH \
-    -H "Authorization: token $TOKEN" \
-    -H "Content-Type: application/json" \
-    "${BASE_URL}/api/v1/${endpoint}" \
-    -d "$data"
-}
-
 # ---------- Loki endpoint detection ----------
 
 detect_loki() {
@@ -123,19 +52,6 @@ detect_loki() {
     LOKI="http://nas-01.lan:3100"
   else
     log_error "Loki appears to be down (both Tailscale and LAN endpoints unreachable)"
-    return 1
-  fi
-}
-
-# ---------- Label resolution ----------
-
-# Usage: resolve_label_id "bug"  =>  sets LABEL_ID
-resolve_label_id() {
-  local label_name="$1"
-  LABEL_ID=$(api_get "repos/${REPO}/labels?limit=50" \
-    | jq -r --arg name "$label_name" '.[] | select(.name == $name) | .id')
-  if [[ -z "$LABEL_ID" ]]; then
-    log_error "label '$label_name' not found"
     return 1
   fi
 }

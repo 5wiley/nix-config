@@ -12,7 +12,7 @@ Fetch open bug issues from Forgejo, prioritize by severity, present to the user 
 ## Step 1: Fetch Open Bug Issues
 
 ```bash
-./scripts/forgejo.sh issue list --label=bug
+fj issue list -l bug
 ```
 
 If the user specified a filter (e.g., "nas-01 only"), filter results by hostname prefix in the title.
@@ -134,9 +134,9 @@ git push -u origin "$BRANCH"
 Create PR:
 
 ```bash
-./scripts/forgejo.sh pr create \
-  --title "<short description>" \
-  --body "## Summary
+fj pr create \
+  -t "<short description>" \
+  -b "## Summary
 
 <what this fixes and why>
 
@@ -148,7 +148,7 @@ Fixes #${ISSUE_NUM}
 - [ ] Deploy and verify fix
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
-  --head "${BRANCH}" --base main
+  -H "${BRANCH}" -B main
 ```
 
 ### 5f. Return to main
@@ -177,13 +177,13 @@ When the user chooses "Fix now (investigation)":
 ### Close an issue
 
 ```bash
-./scripts/forgejo.sh issue close ${ISSUE_NUM}
+fj issue close ${ISSUE_NUM}
 ```
 
 ### Add a comment
 
 ```bash
-./scripts/forgejo.sh issue comment ${ISSUE_NUM} --body "<comment text>
+fj issue comment ${ISSUE_NUM} -b "<comment text>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```
@@ -191,7 +191,7 @@ When the user chooses "Fix now (investigation)":
 ### Close with comment (combined)
 
 ```bash
-./scripts/forgejo.sh issue close ${ISSUE_NUM} --comment "<reason>
+fj issue close ${ISSUE_NUM} --comment "<reason>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```

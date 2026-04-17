@@ -46,25 +46,20 @@ if [[ -z "$ISSUE_NUM" ]]; then
   exit 1
 fi
 
-check_deps curl jq git
-if [[ -z "${FORGEJO_TOKEN:-}" ]]; then
-  check_deps yq
-fi
-resolve_forgejo_config
+check_deps fj jq git
 
 # --- Fetch issue ---
 
 log_info "Fetching issue #${ISSUE_NUM}..."
 
-issue_data=$(api_get "repos/${REPO}/issues/${ISSUE_NUM}") || {
+issue_data=$(fj issue view "$ISSUE_NUM" --json title,state,body,labels 2>/dev/null) || {
   log_error "failed to fetch issue #${ISSUE_NUM}"
   exit 1
 }
 
 title=$(echo "$issue_data" | jq -r '.title')
 state=$(echo "$issue_data" | jq -r '.state')
-body=$(echo "$issue_data" | jq -r '.body // ""')
-labels=$(echo "$issue_data" | jq -r '[.labels[].name] | join(", ")')
+labels=$(echo "$issue_data" | jq -r '.labels // ""')
 
 echo -e "${BOLD}Issue #${ISSUE_NUM}${NC}: ${title}"
 echo -e "State: ${state}  |  Labels: ${labels:-none}"

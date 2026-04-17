@@ -168,18 +168,24 @@ nas-01-console:
 # List recent Forgejo CI runs
 # Usage: just ci              (list recent runs)
 #        just ci -s failure   (show only failures)
-#        just ci show 401     (show run details)
-#        just ci logs 401     (show run logs)
+#        just ci 401          (show run details)
+#        just ci-logs 401     (show run logs)
+#        just ci-logs 401 1   (show logs for job index 1)
 ci *args="":
-  ./scripts/forgejo-runs.sh {{args}}
+  fj run list {{args}}
+
+# Show logs for a CI run, optionally filtered to a specific job
+ci-logs run_number job="":
+  #!/usr/bin/env bash
+  if [[ -n "{{job}}" ]]; then
+    fj run logs {{run_number}} -j "{{job}}"
+  else
+    fj run logs {{run_number}}
+  fi
 
 # Look up hosts by IP, hostname, or partial match
 host-lookup *args="":
   ./scripts/host-lookup.sh {{args}}
-
-# Manage Forgejo issues and PRs
-forgejo *args="":
-  ./scripts/forgejo.sh {{args}}
 
 # Analyze a failed CI run
 ci-analyze *args="":

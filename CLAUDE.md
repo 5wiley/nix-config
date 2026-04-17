@@ -57,22 +57,21 @@ nixos-rebuild switch --flake .#hostname \
 ### CI / Forgejo Actions
 
 ```bash
-just ci                      # List recent Forgejo Action runs
-just ci -n 20                # List last 20 runs
-just ci -s failure           # Show only failed runs
-just ci -b main              # Filter by branch
-just ci show 401             # Show details of run #401
-just ci logs 401             # Show logs for run #401
-just ci logs 401 1           # Show logs for job index 1 of run #401
+fj run list                  # List recent Forgejo Action runs
+fj run list -L 20            # List last 20 runs
+fj run list -s failure       # Show only failed runs
+fj run list -b main          # Filter by branch
+fj run view 401              # Show details of run #401
+fj run logs 401              # Show logs for run #401
+fj run logs 401 -j 1         # Show logs for job index 1 of run #401
 ```
 
-The script reads your API token from the `tea` CLI config at `~/.config/tea/config.yml`.
-Override with `FORGEJO_TOKEN` env var if needed.
+Authentication is managed by `fj auth`. Check status with `fj auth status`.
 
 ### Infrastructure Tooling Scripts
 
-Shared library and CLI tools in `scripts/` for Forgejo, host lookup, CI analysis, and issue triage.
-All Forgejo-related scripts source `scripts/lib/common.sh` for auth, API helpers, and Loki detection.
+Shared library and CLI tools in `scripts/` for host lookup, CI analysis, and issue triage.
+CI analysis and issue-check scripts source `scripts/lib/common.sh` for Loki detection and formatting.
 
 ```bash
 # Host lookup (parses flake-modules/hosts.nix, no nix eval)
@@ -80,12 +79,12 @@ just host-lookup 192.168.5.49         # Resolve IP to hostname
 just host-lookup dns-01               # Resolve hostname to IP
 just host-lookup --list               # Show all hosts
 
-# Forgejo issue/PR management
-just forgejo issue list --label=bug   # List open bugs
-just forgejo issue create --title "host: desc" --body "..." --label bug
-just forgejo issue close 42 --comment "Fixed in #43"
-just forgejo issue comment 42 --body "Still investigating"
-just forgejo pr create --title "fix" --body "..." --head branch
+# Forgejo issue/PR management (via fj CLI)
+fj issue list -l bug                  # List open bugs
+fj issue create -t "host: desc" -b "..." -l bug
+fj issue close 42 -c "Fixed in #43"
+fj issue comment 42 -b "Still investigating"
+fj pr create -t "fix" -b "..." -H branch
 
 # CI failure analysis
 just ci-analyze 603                   # Analyze failed run (with Loki correlation)
@@ -247,8 +246,8 @@ cd secrets && agenix -e service-name.age
 
 ## APIs & Services
 
-- This project uses **Forgejo**, not GitHub. Use the Forgejo API via `./scripts/forgejo.sh` or direct API calls to `https://forgejo.bobtail-clownfish.ts.net/api/v1/repos/bcotton/nix-config/`. Do NOT use `gh` CLI or GitHub APIs.
-- Use `./scripts/forgejo.sh issue list`, `./scripts/forgejo.sh issue create`, etc. for issue management.
+- This project uses **Forgejo**, not GitHub. Use the `fj` CLI (a `gh` clone for Forgejo) for all Forgejo interactions. Do NOT use `gh` CLI or GitHub APIs.
+- Use `fj issue list`, `fj issue create`, `fj pr create`, `fj run list`, etc. for issue, PR, and CI management. Use `fj api` for any endpoints not covered by dedicated subcommands.
 
 ## CI/CD Debugging
 

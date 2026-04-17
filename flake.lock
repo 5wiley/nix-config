@@ -414,11 +414,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776460949,
-        "narHash": "sha256-edAHHhbOSjugTfNcFnQ1CRRBKW2mcY/cARaDrda7jyk=",
+        "lastModified": 1776462047,
+        "narHash": "sha256-B4MIv6Q06qvJt7QlGHicA7e4bP1HJ6XrMVIcEyR77iA=",
         "ref": "refs/heads/main",
-        "rev": "421e8506b7e092f8d14a46296d7e501db1b454c5",
-        "revCount": 20,
+        "rev": "b7578d8afae2ae04dba2d80c5120fe9d3f4d40ee",
+        "revCount": 21,
         "type": "git",
         "url": "ssh://forgejo@nas-01:2222/bcotton/fj.git"
       },

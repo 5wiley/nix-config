@@ -389,7 +389,7 @@ After presenting the report, create Forgejo issues for each genuine action item.
 Before creating, list existing open bug issues to avoid duplicates:
 
 ```bash
-./scripts/forgejo.sh issue list --label=bug
+fj issue list -l bug
 ```
 
 ### Create Issues
@@ -397,9 +397,9 @@ Before creating, list existing open bug issues to avoid duplicates:
 For each action item, create an issue with the `bug` label:
 
 ```bash
-./scripts/forgejo.sh issue create \
-  --title "<host>: <short description>" \
-  --body "## Problem
+fj issue create \
+  -t "<host>: <short description>" \
+  -b "## Problem
 
 <description of the error>
 
@@ -418,7 +418,7 @@ For each action item, create an issue with the `bug` label:
 Discovered via infra-report skill.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)" \
-  --label bug
+  -l bug
 ```
 
 ### Host Lookup
@@ -451,16 +451,16 @@ After presenting the report to the user and filing any action item bugs, publish
 
 1. **Check for duplicate report** — avoid filing twice for the same day:
    ```bash
-   ./scripts/forgejo.sh issue list --label=report --limit=5
+   fj issue list -l report -L 5
    ```
    If a report for today's date already exists, skip creating a new one (or add a comment to the existing one with updated findings).
 
 2. **Create the report issue**:
    ```bash
-   ./scripts/forgejo.sh issue create \
-     --title "Infra Report — YYYY-MM-DD" \
-     --body "<full markdown report>" \
-     --label report
+   fj issue create \
+     -t "Infra Report — YYYY-MM-DD" \
+     -b "<full markdown report>" \
+     -l report
    ```
 
    - **Title format**: `Infra Report — YYYY-MM-DD` (use today's date)
@@ -474,7 +474,7 @@ After presenting the report to the user and filing any action item bugs, publish
 ### Notes
 
 - Reports are kept open by default as a browsable daily log
-- Old reports can be bulk-closed periodically: `./scripts/forgejo.sh issue list --label=report` then close as needed
+- Old reports can be bulk-closed periodically: `fj issue list -l report` then close as needed
 - The `report` label (blue, #0075ca) distinguishes these from bug issues in the issue tracker
 
 ## Report Diffing (Comparison with Previous Report)
@@ -485,19 +485,14 @@ After generating the current report, fetch the most recent previous report to id
 
 ```bash
 # Get the most recent report issues
-./scripts/forgejo.sh issue list --label=report --limit=3
+fj issue list -l report -L 3
 ```
 
-Pick the most recent report that is NOT today's date. Fetch its body via the Forgejo API:
+Pick the most recent report that is NOT today's date. Fetch its body:
 
 ```bash
-# Resolve Forgejo config for API access
-source ./scripts/lib/common.sh
-resolve_forgejo_config
-
 # Fetch the previous report body (replace NNN with issue number)
-curl -sf -H "Authorization: token $TOKEN" \
-  "${BASE_URL}/api/v1/repos/${REPO}/issues/NNN" | jq -r '.body'
+fj issue view NNN --json body --jq '.body'
 ```
 
 ### Comparison Points
