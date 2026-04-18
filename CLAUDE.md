@@ -248,6 +248,7 @@ cd secrets && agenix -e service-name.age
 
 - This project uses **Forgejo**, not GitHub. Use the `fj` CLI (a `gh` clone for Forgejo) for all Forgejo interactions. Do NOT use `gh` CLI or GitHub APIs.
 - Use `fj issue list`, `fj issue create`, `fj pr create`, `fj run list`, etc. for issue, PR, and CI management. Use `fj api` for any endpoints not covered by dedicated subcommands.
+- Any bugs or deficiencies found in `fj` should be logged as issues on the `bcotton/fj` repo on Forgejo using `fj issue create -R bcotton/fj`.
 
 ## CI/CD Debugging
 
