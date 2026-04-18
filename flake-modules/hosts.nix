@@ -314,6 +314,28 @@
         icon = "prometheus.svg";
         description = "Metrics collection";
         href = "http://admin:9001";
+        widget = {
+          type = "prometheus";
+          url = "http://admin:9001";
+        };
+      };
+      alertmanager = {
+        name = "Alertmanager";
+        category = "Monitoring";
+        icon = "prometheus.svg";
+        description = "Alert routing & silencing";
+        href = "http://admin:9093";
+        widget = {
+          type = "customapi";
+          url = "http://admin:9001/api/v1/query?query=count(ALERTS{alertstate=%22firing%22,alertname!=%22Watchdog%22})%20or%20vector(0)";
+          mappings = [
+            {
+              field = "data.result.0.value.1";
+              label = "Firing Alerts";
+              format = "number";
+            }
+          ];
+        };
       };
       # Multi-instance services (readarr uses instances, not standard options)
       readarr-epub = {
