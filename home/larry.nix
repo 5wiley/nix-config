@@ -241,7 +241,7 @@
     tldr # simplified man pages
     direnv # per-directory environments
     pnpm
-    nodejs_22
+    nodejs_24
     claude-code # Anthropic's Claude Code CLI
     crushPackage # AI coding agent
 
