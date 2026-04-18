@@ -145,7 +145,9 @@ in {
     };
   };
 
-  # Configure distributed build fleet
+  # Coordinator role: nix-01 is the sole in-repo coordinator. `just deploy` from
+  # here distributes to the worker fleet (nas-01, nix-02, nix-03). Workers have
+  # empty `builders` lists so they build locally when asked and never redelegate.
   services.nix-builder.coordinator = {
     enable = true;
     sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
@@ -176,6 +178,10 @@ in {
       }
     ];
   };
+
+  # Raise local build concurrency so nix-01's own CPU contributes to the fleet
+  # (coordinator module caps `max-jobs` at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
 
   # Push all locally-built paths to the Harmonia cache on nas-01
   services.nix-builder.cache-pusher = {

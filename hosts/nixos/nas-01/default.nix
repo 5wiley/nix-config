@@ -284,38 +284,22 @@ in {
     };
   };
 
-  # Configure distributed build fleet
+  # Worker role: accept distributed builds but do NOT redelegate.
+  # nix-01 is the sole in-repo coordinator (see hosts/nixos/nix-01/default.nix);
+  # CI (.forgejo/workflows/nix-check.yaml) also coordinates via its own SSH config.
+  # Keeping coordinator.enable here preserves signing/cache plumbing for this host
+  # (which runs Harmonia). Empty `builders` prevents the full-mesh cascade deadlock.
   services.nix-builder.coordinator = {
     enable = true;
     sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
     signingKeyPath = config.age.secrets."harmonia-signing-key".path;
-    enableLocalBuilds = true; # nas-01 builds locally, no SSH to itself
-    builders = [
-      # Note: localhost removed to avoid SSH loop - enableLocalBuilds handles local builds
-      # Use .lan suffix for local DNS resolution (Tailscale names won't resolve from builder environment)
-      {
-        hostname = "nix-01.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-02.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-03.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-    ];
+    enableLocalBuilds = true;
+    builders = [];
   };
+
+  # Raise local build concurrency to actually use this host's CPU when serving
+  # remote build requests (coordinator module caps this at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
 
   # Create builder user for remote/local builds
   users.users.nix-builder = {

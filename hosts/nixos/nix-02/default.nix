@@ -95,36 +95,22 @@ in {
 
   nix.settings.trusted-users = ["nix-builder"];
 
-  # Configure distributed build fleet (same as nix-01, excluding self)
+  # Worker role: accept distributed builds but do NOT redelegate.
+  # nix-01 is the sole in-repo coordinator; CI coordinates via its own SSH config.
+  # Empty `builders` prevents the full-mesh cascade deadlock where serving hosts
+  # would recursively delegate to peers. cache-pusher below still pushes locally-
+  # built artifacts to nas-01's Harmonia cache.
   services.nix-builder.coordinator = {
     enable = true;
     sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
     enableLocalBuilds = true;
     localCache = null; # nas-01 handles cache signing
-    builders = [
-      {
-        hostname = "nas-01.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 2;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-01.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 4;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-03.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 4;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-    ];
+    builders = [];
   };
+
+  # Raise local build concurrency to actually use this host's CPU when serving
+  # remote build requests (coordinator module caps this at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
 
   # Push all locally-built paths to the Harmonia cache on nas-01
   services.nix-builder.cache-pusher = {
