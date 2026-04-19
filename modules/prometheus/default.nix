@@ -312,8 +312,10 @@ in {
           };
           static_configs = [
             {targets = ["nas-01.lan:8443"];}
-            {targets = ["condo-01.lan:8443"];}
-            {targets = ["natalya-01.lan:8443"];}
+            # Off-LAN: dns-01 only serves .lan on 192.168.5.0/24, so reach
+            # these over Tailscale MagicDNS.
+            {targets = ["condo-01.bobtail-clownfish.ts.net:8443"];}
+            {targets = ["natalya-01.bobtail-clownfish.ts.net:8443"];}
           ];
           relabel_configs = [
             {
