@@ -40,4 +40,11 @@
       Persistent = true;
     };
   };
+
+  # Drop the stale incus.prom from the old monolithic collector — it also
+  # exports incus_warnings{severity=...}, so leaving it alongside incus-warnings.prom
+  # causes node-exporter to reject every scrape with a duplicate-metric error.
+  systemd.tmpfiles.rules = lib.mkIf config.virtualisation.incus.enable [
+    "r /var/lib/prometheus-node-exporter-text-files/incus.prom - - - - -"
+  ];
 }
