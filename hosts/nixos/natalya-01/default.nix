@@ -84,8 +84,9 @@ in {
   networking = {
     hostId = hostSpec.hostId;
     hostName = "natalya-01";
-    defaultGateway = "10.0.0.1";
-    nameservers = ["10.0.0.1"];
+    # defaultGateway and nameservers supplied by DHCP on br0.
+    # Setting them statically races network-setup against dhcpcd during
+    # nixos-rebuild test → "Nexthop has invalid gateway" (forgejo #299).
     useDHCP = false;
     bridges."br0".interfaces = ["eno1"];
     interfaces."br0".useDHCP = true;
