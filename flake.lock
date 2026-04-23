@@ -766,11 +766,11 @@
         "zon2nix": "zon2nix"
       },
       "locked": {
-        "lastModified": 1776790661,
-        "narHash": "sha256-bK/KXNjfD/GZePrLRGOVfO+LNcZT+issdDRpcn9U4aY=",
+        "lastModified": 1776909313,
+        "narHash": "sha256-9rzcbBvTX7OT2oAFW5seNSuNiW09f1iUUyYYo2+DTX8=",
         "owner": "ghostty-org",
         "repo": "ghostty",
-        "rev": "6e0b0311e49243fb0f04c96df1fc9e79ab5c710d",
+        "rev": "db210e4d7f1c63c61f5b7afa131188663486f6b6",
         "type": "github"
       },
       "original": {
@@ -1133,11 +1133,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1776801943,
-        "narHash": "sha256-mFstgB0Zqdwa7fM4ha/jFN7mqRZxUjZILRhVA9ktMvg=",
+        "lastModified": 1776889757,
+        "narHash": "sha256-Pr4Ps7JtZ5GaR7lUwcXiK8b7JCZ7CiMYokqgvp52r/4=",
         "owner": "AlexsJones",
         "repo": "llmfit",
-        "rev": "319c0fe5b2d0845f1279e4440772be17ed8e1de3",
+        "rev": "b308b73595a25b8d25ff087e7ef5353d2452aed0",
         "type": "github"
       },
       "original": {
@@ -1218,11 +1218,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1776784995,
-        "narHash": "sha256-ikxb8cZGWHuZMs3xS471GVrpGA0xW1YFcIVOPTVkhBo=",
+        "lastModified": 1776883427,
+        "narHash": "sha256-prHCm++hniRcoqzvWTEFyAiLKT6m+EUVCRaDLrsuEgM=",
         "owner": "numtide",
         "repo": "nix-ai-tools",
-        "rev": "e3d40d2cd66a4f8052e4224ec027c6896a455847",
+        "rev": "6fd26c9cb50d9549f3791b3d35e4f72f97677103",
         "type": "github"
       },
       "original": {
@@ -1238,11 +1238,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1772484233,
-        "narHash": "sha256-dE9Jk3qp+icmtCtl1rHiPP3MhbB9Sds3J60xUYo9TAo=",
+        "lastModified": 1776876620,
+        "narHash": "sha256-kJyXoMW00IHJLE4HlkrFt0uh3uWp2eEx2BPZvV5kn20=",
         "ref": "refs/heads/main",
-        "rev": "6e39f70120805aca4b9e77fdb1277800bc57a436",
-        "revCount": 7,
+        "rev": "9be316b01526a17f7e81b2ef354f21d25cfef56e",
+        "revCount": 8,
         "type": "git",
         "url": "https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-builder-config"
       },
@@ -1541,11 +1541,11 @@
     },
     "nixpkgs_12": {
       "locked": {
-        "lastModified": 1776560675,
-        "narHash": "sha256-p68udKWWh7+V4ZPpcMDq0gTHWNZJnr4JPI+kHPPE40o=",
+        "lastModified": 1776734388,
+        "narHash": "sha256-vl3dkhlE5gzsItuHoEMVe+DlonsK+0836LIRDnm6MXQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e07580dae39738e46609eaab8b154de2488133ce",
+        "rev": "10e7ad5bbcb421fe07e3a4ad53a634b0cd57ffac",
         "type": "github"
       },
       "original": {
@@ -2234,11 +2234,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1776824889,
-        "narHash": "sha256-ZeOnJKOQa0+YKpy4QakmbLqYjkFZpvKze9AkEmbuEwY=",
+        "lastModified": 1776878670,
+        "narHash": "sha256-vM7jpVQV3dV1NUxjGIZubOdgpSWs0jSq0WlxoXF6/R8=",
         "owner": "max-sixty",
         "repo": "worktrunk",
-        "rev": "2114fda101d50311f44f479fd2e5a15028c01486",
+        "rev": "e6ed3302d9d6cd6a55adbe779724803993028d28",
         "type": "github"
       },
       "original": {
