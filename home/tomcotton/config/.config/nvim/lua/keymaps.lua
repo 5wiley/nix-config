@@ -23,3 +23,8 @@ vim.keymap.set('n', '<leader>ft', function()
     -- Open the file in the current buffer
     vim.cmd("edit " .. temp_file)
 end, { desc = "Open temporary markdown file" })
+
+-- Map return to clear search highlights
+vim.keymap.set("n", "<CR>", "<cmd>noh<CR>", {
+  desc = "clear search highlights",
+})

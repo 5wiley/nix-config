@@ -5,12 +5,17 @@ view=$1
 
 OpenAndMove()
 {
+        open -a "TextEdit" # dummy, to stop false positives
+        sleep 0.1
         open -a "$1"
         sleep 0.2
         aerospace move-node-to-workspace $2
 }
 
 if [ "$view" == "desktop" ]; then
+        open -a "TextEdit" # dummy, to stop false positives
+        sleep 0.5
+
         ws=6
         OpenAndMove "mail" $ws
         OpenAndMove "messages" $ws
@@ -33,6 +38,8 @@ if [ "$view" == "desktop" ]; then
         OpenAndMove "obsidian" $ws
         aerospace workspace $ws
         aerospace layout v_tiles
+
+        open -a "TextEdit"
 fi
 
 if [ "$view" == "tutorial" ]; then

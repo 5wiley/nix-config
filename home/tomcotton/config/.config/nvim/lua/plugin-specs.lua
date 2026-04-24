@@ -454,6 +454,10 @@ require("lazy").setup {
     title = "Plugin Manager",
     title_pos = "center",
   },
+  readme = {
+    enabled = false,
+  },
+  lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
   rocks = {
     enabled = false,
     hererocks = false,

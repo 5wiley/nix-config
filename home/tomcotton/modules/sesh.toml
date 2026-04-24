@@ -1,6 +1,5 @@
 [[session]]
-name = "explore"
-startup_command = "lfcd"
+name = "default"
 
 [[session]]
 name = "scratch"
