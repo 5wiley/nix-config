@@ -1,7 +1,7 @@
 ---
 name: infra-report
 description: Generate an infrastructure health report from Loki logs. Use when asked to check logs and create a report, generate a health report, summarize infrastructure status, or do a log review.
-allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/*), Bash(ssh *)
+allowed-tools: Bash(curl *), Bash(jq *), Bash(date *), Bash(sleep *), Bash(yq *), Bash(cat *), Bash(./scripts/*), Bash(ssh *), Bash(fj *), Bash(git *), Task, Agent
 argument-hint: time window (e.g., 'last 12 hours', 'last 24 hours', 'last 7 days')
 ---
 
@@ -442,6 +442,105 @@ To resolve an IP address to a hostname:
   - Persistent service failures (stuck imports, repeated crashes)
   - Configuration bugs (missing PATH packages, wrong permissions)
   - Anything that generates >100 errors/day and isn't cosmetic
+
+## Deep Investigation and PR Drafting
+
+After all action-item issues have been filed, spawn one sub-agent **per newly created issue**
+to investigate the root cause, update the issue with findings, and draft a fix PR when the
+problem is addressable by a code change in this repo.
+
+Run these sub-agents in **parallel** — emit all `Agent` tool calls in a single message,
+since each investigation is independent.
+
+### When to Spawn a Sub-Agent
+
+Spawn an investigation agent for **each issue created in the previous step**. Skip:
+- Issues that already existed before this run (no new investigation needed)
+- Hardware-only issues with no possible code fix (e.g., a failing physical disk —
+  the agent should still investigate but should not draft a PR)
+- Issues whose remediation requires manual operator action only (replace UPS battery,
+  reseat cable, etc.)
+
+### Sub-Agent Prompt Template
+
+Use the `general-purpose` subagent type. Brief each agent with everything it needs —
+it has no memory of this session.
+
+The prompt **must** include:
+1. The Forgejo issue number and title
+2. The full evidence/log lines from the issue
+3. The hostname(s) involved
+4. Explicit instructions to:
+   - Investigate root cause (read relevant nix modules, ssh to host if needed,
+     check git log for recent changes near the failure, query Loki for broader
+     context)
+   - Update the issue with findings using `fj issue comment <N> -b "..."`
+   - If the fix is a code change in this repo, create a branch, make the change,
+     and open a PR with `fj pr create` that references the issue with `Fixes #N`
+   - If the fix is **not** a code change (hardware, manual action, external
+     service), post the diagnosis as a comment and note explicitly in the
+     comment that no PR is being drafted, with the reason
+5. A reminder NOT to commit `flake.lock` changes (per CLAUDE.md)
+6. A reminder to use `fj` (not `gh`) for all Forgejo interactions
+7. Branch naming convention: `fix/issue-<N>-<short-slug>`
+
+### Example Spawn
+
+```
+Agent({
+  subagent_type: "general-purpose",
+  description: "Investigate issue #NNN",
+  prompt: """
+    Forgejo issue #NNN: <title>
+
+    Evidence from infra-report:
+    <paste the evidence block>
+
+    Host(s): <hostname>
+
+    Your task:
+    1. Investigate the root cause. Useful tools:
+       - Read relevant modules under modules/, clubcotton/services/, hosts/
+       - `git log -p -- <path>` to find recent changes near the failure
+       - `ssh -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519 bcotton@<host>.lan "<cmd>"`
+         for live state (systemctl status, journalctl, df, etc.)
+       - `./scripts/loki-query.sh` for broader log context
+       - `./scripts/host-lookup.sh` to resolve hosts
+
+    2. Post your findings as a comment on the issue:
+       fj issue comment NNN -b "## Investigation\n\n<findings>"
+
+    3. If the issue is fixable by a code change in this repo:
+       - Create a branch: git checkout -b fix/issue-NNN-<slug>
+       - Make the minimal change required
+       - Run `just fmt` and a relevant `just build <host>` to verify
+       - Commit (do NOT include flake.lock unless it's the actual fix)
+       - Push and open a PR:
+           fj pr create -t "fix: <summary> (#NNN)" \\
+             -b "Fixes #NNN\n\n<explanation>" -H fix/issue-NNN-<slug>
+       - Comment on the issue linking the PR
+
+    4. If the issue is NOT fixable by a code change (hardware, manual action,
+       external service), comment on the issue with the diagnosis and explicitly
+       state that no PR is being drafted, with the reason.
+
+    Constraints:
+    - Use `fj`, never `gh`
+    - Do NOT modify flake.lock unless that IS the fix
+    - Do NOT push to main; always use a feature branch + PR
+    - Keep changes minimal — fix only the reported issue
+    - Report back with: issue comment URL, PR URL (if any), and one-line summary
+  """
+})
+```
+
+### After Sub-Agents Return
+
+Summarize for the user:
+- For each issue: link to the comment, link to the PR (or "no PR — <reason>")
+- Any sub-agent that failed to investigate, with the failure reason
+
+Do **not** merge any of the drafted PRs automatically — they are for the user to review.
 
 ## Publishing the Report as a Forgejo Issue
 
