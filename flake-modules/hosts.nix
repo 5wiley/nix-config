@@ -18,6 +18,16 @@
       import nixpkgs-unstable {
         inherit system;
         config.allowUnfree = true;
+        overlays = [
+          # Re-add pgvector to open-webui — moved to optional-dependencies
+          # in 0.9.1, breaks pgvector vector_db backend. See issue #327.
+          ((import ../overlays/open-webui.nix) {
+            config = {};
+            pkgs = null;
+            lib = nixpkgs-unstable.lib;
+            unstablePkgs = null;
+          })
+        ];
       };
 
     # Common module builders
