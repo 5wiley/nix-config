@@ -83,8 +83,8 @@ in {
   networking = {
     hostId = hostSpec.hostId;
     hostName = "condo-01";
-    # defaultGateway and nameservers supplied by DHCP on br0.
-    # Setting them statically races network-setup against dhcpcd during
+    # defaultGateway is supplied by DHCP on br0.
+    # Setting it statically races network-setup against dhcpcd during
     # nixos-rebuild test → "Nexthop has invalid gateway" (forgejo #299).
     useDHCP = false;
     bridges."br0".interfaces = ["eno1"];
@@ -95,6 +95,21 @@ in {
     #    prefixLength = 24;
     #  }
     #];
+
+    # Static nameservers to fix forgejo #332: tailscaled was losing its
+    # DHCP-supplied upstream resolvers around 03:00 MDT (DHCP lease event
+    # coinciding with auto-upgrade), causing 4 days of consecutive failures
+    # with `dns: resolver: forward: no upstream resolvers set, returning
+    # SERVFAIL` for cache.nixos.org / github.com.
+    #
+    # tailscaled forwards non-MagicDNS queries to whatever upstream resolvers
+    # it learned from /etc/resolv.conf, so pinning resolv.conf to stable
+    # public + LAN resolvers ensures the upstream set is never empty.
+    nameservers = ["1.1.1.1" "9.9.9.9" "192.168.12.1"];
+    # Prevent dhcpcd from overwriting our static nameservers when leases renew.
+    dhcpcd.extraConfig = ''
+      nohook resolv.conf
+    '';
   };
   time.timeZone = hostSpec.timeZone;
 
