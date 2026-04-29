@@ -691,6 +691,7 @@ in {
       arduino-cli
       sesh
       git-lfs
+      typst
       # hugo
       # claude-code
       # python3Packages.libtmux
