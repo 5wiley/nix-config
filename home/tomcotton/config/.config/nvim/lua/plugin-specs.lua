@@ -105,19 +105,19 @@ local plugin_specs = {
     end,
     event = "VeryLazy",
   },
-  {
-    "epwalsh/obsidian.nvim",
-    version = "*",  -- recommended, use latest release instead of latest commit
-    lazy = true,
-    ft = "markdown",
-    dependencies = {
-      -- Required.
-      "nvim-lua/plenary.nvim",
-    },
-    config = function()
-      require("config.obsidian")
-    end,
-  },
+  -- {
+  --   "epwalsh/obsidian.nvim",
+  --   version = "*",  -- recommended, use latest release instead of latest commit
+  --   lazy = true,
+  --   ft = "markdown",
+  --   dependencies = {
+  --     -- Required.
+  --     "nvim-lua/plenary.nvim",
+  --   },
+  --   config = function()
+  --     require("config.obsidian")
+  --   end,
+  -- },
   -- {
   --   "lmburns/lf.nvim",
   --   cmd = "Lf",

@@ -25,19 +25,21 @@ if [ "$view" == "desktop" ]; then
         ws=7
         OpenAndMove "spotify" $ws
         OpenAndMove "discord" $ws
+        aerospace layout h_tiles
 
         ws=8
         OpenAndMove "ghostty" $ws
         OpenAndMove "finder" $ws
         aerospace workspace $ws
-        aerospace layout v_tiles
+        aerospace layout h_tiles
 
         ws=9
         # source ~/.zshrc
         OpenAndMove "zen" $ws
         OpenAndMove "obsidian" $ws
+        OpenAndMove "clockify desktop" $ws
         aerospace workspace $ws
-        aerospace layout v_tiles
+        aerospace layout h_tiles
 
         open -a "TextEdit"
 fi
