@@ -125,4 +125,3 @@ incus start my-container
 | Script | Purpose |
 |--------|---------|
 | `scripts/provision-incus-ssd.sh` | Migrate nix-01/02/03 Incus storage to dedicated SSDs |
-| `scripts/join-incus-nas01.sh` | Join nas-01 to the cluster with zvol-backed storage |
