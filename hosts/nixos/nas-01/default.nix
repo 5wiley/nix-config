@@ -752,14 +752,37 @@ in {
   # Always run `nixos-rebuild dry-activate` before switching.
   disko.zfs = {
     enable = true;
-    # Incus manages its own datasets inside the ssdpool/local/incus zvol;
-    # these change dynamically and must not be managed by disko-zfs.
-    settings.ignoredDatasets = ["incus" "incus/*"];
+    # Incus stores its own datasets inside ssdpool/local/incus and creates them
+    # dynamically (one per instance/image/etc.). disko-zfs must not destroy
+    # these on activation.
+    settings.ignoredDatasets = [
+      "ssdpool/local/incus/buckets"
+      "ssdpool/local/incus/buckets/*"
+      "ssdpool/local/incus/containers"
+      "ssdpool/local/incus/containers/*"
+      "ssdpool/local/incus/custom"
+      "ssdpool/local/incus/custom/*"
+      "ssdpool/local/incus/deleted"
+      "ssdpool/local/incus/deleted/*"
+      "ssdpool/local/incus/images"
+      "ssdpool/local/incus/images/*"
+      "ssdpool/local/incus/virtual-machines"
+      "ssdpool/local/incus/virtual-machines/*"
+    ];
     settings.datasets = {
       # --- ssdpool datasets ---
       # NOTE: ssdpool/local/database, forgejo, garage, nix-cache, nix-cache-proxy
       # are declared by their respective service modules via zfsDataset option
       "ssdpool/local" = {};
+      "ssdpool/local/incus" = {
+        properties = {
+          mountpoint = "legacy";
+          canmount = "off";
+          recordsize = "16K";
+          compression = "lz4";
+          atime = "off";
+        };
+      };
       "ssdpool/local/models" = {
         properties = {
           mountpoint = "/models";
@@ -946,11 +969,6 @@ in {
       #     };
       #   };
       # };
-      volumes = {
-        "local/incus" = {
-          size = "1T";
-        };
-      };
     };
 
     mediapool = {

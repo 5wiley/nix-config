@@ -4,15 +4,15 @@
 
 4-node Incus cluster with ZFS storage:
 
-| Node   | CPU                        | Storage          | IP             |
-|--------|----------------------------|------------------|----------------|
-| nix-01 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool | 192.168.5.210  |
-| nix-02 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool | 192.168.5.212  |
-| nix-03 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool | 192.168.5.214  |
-| nas-01 | EPYC 7402 (48 threads)     | 984 GiB zvol     | 192.168.5.42   |
+| Node   | CPU                        | Storage              | IP             |
+|--------|----------------------------|----------------------|----------------|
+| nix-01 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool     | 192.168.5.210  |
+| nix-02 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool     | 192.168.5.212  |
+| nix-03 | Ryzen 7 7840HS (16 threads)| 899 GiB SSD pool     | 192.168.5.214  |
+| nas-01 | EPYC 7402 (48 threads)     | ssdpool dataset      | 192.168.5.42   |
 
 - nix-01/02/03: Dedicated NVMe SSDs with standalone ZFS `incus` pool
-- nas-01: 1TB zvol on `ssdpool` (`ssdpool/local/incus`) with ZFS `incus` pool inside
+- nas-01: ZFS dataset `ssdpool/local/incus` directly (no inner pool — see issue #359)
 
 ## Live VM Migration
 
@@ -74,20 +74,27 @@ Each host has a dedicated NVMe SSD (ex-Ceph) with a ZFS pool named `incus`:
 # Auto-imported at boot via: boot.zfs.extraPools = ["incus"]
 ```
 
-### nas-01: zvol-backed pool
+### nas-01: ssdpool dataset
 
-nas-01 uses a zvol because `disko-zfs` manages `ssdpool` datasets and would destroy undeclared Incus datasets. The zvol provides isolation:
+nas-01 uses `ssdpool/local/incus` as a regular ZFS dataset (not a pool-on-zvol).
+The earlier zvol layout deadlocked under VM startup IO and sanoid snapshot
+load — see issue #359.
 
 ```
-ssdpool/local/incus (1TB zvol)
-  └── ZFS pool "incus" created inside the zvol
-      └── Incus manages datasets freely here
+ssdpool (RAIDZ1 NVMe)
+  └── ssdpool/local/incus (dataset, mountpoint=legacy, recordsize=16K)
+      └── Incus creates child datasets here (buckets, containers, custom,
+          deleted, images, virtual-machines)
 ```
 
-```bash
-# Provisioned by: scripts/join-incus-nas01.sh
-# NixOS config declares the zvol size in clubcotton.zfs_raidz1.ssdpool.volumes
-```
+The dataset is declared in `disko.zfs.settings.datasets` in
+`hosts/nixos/nas-01/default.nix`. Incus child datasets are listed in
+`disko.zfs.settings.ignoredDatasets` so disko-zfs won't destroy them on
+activation.
+
+The cluster `local` pool is configured per-member: nas-01 has
+`source=ssdpool/local/incus` and `zfs.pool_name=ssdpool/local/incus`, while
+nix-01/02/03 use `source=incus` (their dedicated pools).
 
 ## Common Operations
 
@@ -118,4 +125,3 @@ incus start my-container
 | Script | Purpose |
 |--------|---------|
 | `scripts/provision-incus-ssd.sh` | Migrate nix-01/02/03 Incus storage to dedicated SSDs |
-| `scripts/join-incus-nas01.sh` | Join nas-01 to the cluster with zvol-backed storage |
