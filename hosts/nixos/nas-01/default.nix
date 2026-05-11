@@ -479,7 +479,23 @@ in {
           ttl = 1800;
         };
         "qwen3.5-35b-a3b-general" = {
-          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k_xl-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k_xl-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K.gguf --ctx-size 262144 --parallel 1 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
           ttl = 1800;
         };
         "embeddinggemma-300m-qat-q8_0" = {
