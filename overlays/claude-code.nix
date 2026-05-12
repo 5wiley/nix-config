@@ -9,22 +9,19 @@
   # Update with: ./scripts/upgrade-claude-code.sh
   claude-code = unstablePkgs.buildNpmPackage (finalAttrs: {
     pname = "claude-code";
-    version = "2.1.111";
+    version = "2.1.139";
 
     src = unstablePkgs.fetchzip {
       url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-      hash = "sha256-K3qhZXVJ2DIKv7YL9f/CHkuUYnK0lkIR1wjEa+xeSCk=";
+      hash = "sha256-iLKbL+QQuhbUs9zoy3oCcqvV2spsk5++LnsPpkbgVK8=";
     };
 
-    npmDepsHash = "sha256-T+CAUyo82wU3Z5F+1k59rlV+3CHDtT9iA4vFeSVLB9U=";
+    npmDepsHash = "sha256-K0s9Hyj2GucChc5lDIr74nr85BL5kFQEw0kaQOoz1i0=";
 
     strictDeps = true;
 
     postPatch = ''
       cp ${./claude-code-package-lock.json} package-lock.json
-
-      substituteInPlace cli.js \
-            --replace-fail '#!/bin/sh' '#!/usr/bin/env sh'
     '';
 
     dontNpmBuild = true;
