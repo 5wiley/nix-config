@@ -4,44 +4,64 @@
   lib,
   unstablePkgs,
   ...
-}: final: prev: {
+}: final: prev:
+let
+  stdenv = unstablePkgs.stdenvNoCC;
+  baseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  manifest = lib.importJSON ./claude-code-manifest.json;
+  platformKey = "${stdenv.hostPlatform.node.platform}-${stdenv.hostPlatform.node.arch}";
+  platformManifestEntry = manifest.platforms.${platformKey};
+in
+{
   # Pin claude-code to a specific version.
-  # Update with: ./scripts/upgrade-claude-code.sh
-  claude-code = unstablePkgs.buildNpmPackage (finalAttrs: {
+  # To update: fetch new manifest.json from
+  #   https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/<version>/manifest.json
+  # and save as overlays/claude-code-manifest.json
+  claude-code = stdenv.mkDerivation (finalAttrs: {
     pname = "claude-code";
-    version = "2.1.139";
+    inherit (manifest) version;
 
-    src = unstablePkgs.fetchzip {
-      url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${finalAttrs.version}.tgz";
-      hash = "sha256-iLKbL+QQuhbUs9zoy3oCcqvV2spsk5++LnsPpkbgVK8=";
+    src = unstablePkgs.fetchurl {
+      url = "${baseUrl}/${finalAttrs.version}/${platformKey}/claude";
+      sha256 = platformManifestEntry.checksum;
     };
 
-    npmDepsHash = "sha256-K0s9Hyj2GucChc5lDIr74nr85BL5kFQEw0kaQOoz1i0=";
+    dontUnpack = true;
+    dontBuild = true;
+    __noChroot = stdenv.hostPlatform.isDarwin;
+    dontStrip = true;
+
+    nativeBuildInputs = [
+      unstablePkgs.installShellFiles
+      unstablePkgs.makeBinaryWrapper
+    ] ++ lib.optionals stdenv.hostPlatform.isElf [unstablePkgs.autoPatchelfHook];
 
     strictDeps = true;
 
-    postPatch = ''
-      cp ${./claude-code-package-lock.json} package-lock.json
-    '';
+    installPhase = ''
+      runHook preInstall
 
-    dontNpmBuild = true;
+      install -Dm755 $src $out/bin/claude
 
-    env.AUTHORIZED = "1";
-
-    postInstall = ''
       wrapProgram $out/bin/claude \
         --set DISABLE_AUTOUPDATER 1 \
+        --set-default FORCE_AUTOUPDATE_PLUGINS 1 \
         --set DISABLE_INSTALLATION_CHECKS 1 \
-        --unset DEV \
+        --set USE_BUILTIN_RIPGREP 0 \
         --prefix PATH : ${
         lib.makeBinPath (
-          [unstablePkgs.procps]
-          ++ lib.optionals unstablePkgs.stdenv.hostPlatform.isLinux [
+          [
+            unstablePkgs.procps
+            unstablePkgs.ripgrep
+          ]
+          ++ lib.optionals stdenv.hostPlatform.isLinux [
             unstablePkgs.bubblewrap
             unstablePkgs.socat
           ]
         )
       }
+
+      runHook postInstall
     '';
 
     meta = {
