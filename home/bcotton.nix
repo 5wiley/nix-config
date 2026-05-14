@@ -186,9 +186,16 @@
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
-    stdlib = builtins.readFile (pkgs.runCommandLocal "devenv-direnvrc" {} ''
-      ${devenvPackage}/bin/devenv direnvrc > $out
-    '');
+    stdlib = ''
+      : ''${XDG_CACHE_HOME:=$HOME/.cache}
+      declare -A direnv_layout_dirs
+      direnv_layout_dir() {
+        local hash path
+        hash="$(shasum <<< "$PWD" | cut -c-7)"
+        path="''${PWD//[^a-zA-Z0-9]/-}"
+        echo "''${direnv_layout_dirs[$PWD]:=$XDG_CACHE_HOME/direnv/layouts/''${hash}''${path}}"
+      }
+    '';
   };
 
   programs.fzf = {
