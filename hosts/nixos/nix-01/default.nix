@@ -294,7 +294,7 @@ in {
     description = "Generate daily infrastructure health report via Claude Code";
     after = ["network-online.target"];
     wants = ["network-online.target"];
-    path = [pkgs.git pkgs.claude-code pkgs.curl pkgs.jq pkgs.openssh];
+    path = [pkgs.bash pkgs.git pkgs.claude-code pkgs.curl pkgs.jq pkgs.openssh pkgs.uv];
 
     serviceConfig = {
       Type = "oneshot";

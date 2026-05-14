@@ -544,7 +544,14 @@ Do **not** merge any of the drafted PRs automatically — they are for the user 
 
 ## Publishing the Report as a Forgejo Issue
 
-After presenting the report to the user and filing any action item bugs, publish the full report as a Forgejo issue for the daily log archive.
+**MANDATORY**: You MUST publish the report as a Forgejo issue. This is non-negotiable and non-interactive. Do NOT ask the user "Want me to publish this?" — just publish it. The skill is invoked from a non-interactive systemd timer; asking for confirmation breaks the workflow.
+
+Publish the report **even when**:
+- The report is "all green" / no action items
+- All action items are continuations of existing bugs
+- You think the user might not need it
+
+The daily report archive is the point of this skill. If you skip publishing, the run is incomplete.
 
 ### Steps
 
@@ -552,9 +559,9 @@ After presenting the report to the user and filing any action item bugs, publish
    ```bash
    fj issue list -l report -L 5
    ```
-   If a report for today's date already exists, skip creating a new one (or add a comment to the existing one with updated findings).
+   If a report for today's date already exists, add a comment to the existing one with updated findings instead of creating a new issue. Do NOT skip silently.
 
-2. **Create the report issue**:
+2. **Create the report issue** (this step is REQUIRED, not optional):
    ```bash
    fj issue create \
      -t "Infra Report — YYYY-MM-DD" \
