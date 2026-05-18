@@ -4,15 +4,13 @@
   lib,
   unstablePkgs,
   ...
-}: final: prev:
-let
+}: final: prev: let
   stdenv = unstablePkgs.stdenvNoCC;
   baseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
   manifest = lib.importJSON ./claude-code-manifest.json;
   platformKey = "${stdenv.hostPlatform.node.platform}-${stdenv.hostPlatform.node.arch}";
   platformManifestEntry = manifest.platforms.${platformKey};
-in
-{
+in {
   # Pin claude-code to a specific version.
   # To update: fetch new manifest.json from
   #   https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/<version>/manifest.json
@@ -31,10 +29,12 @@ in
     __noChroot = stdenv.hostPlatform.isDarwin;
     dontStrip = true;
 
-    nativeBuildInputs = [
-      unstablePkgs.installShellFiles
-      unstablePkgs.makeBinaryWrapper
-    ] ++ lib.optionals stdenv.hostPlatform.isElf [unstablePkgs.autoPatchelfHook];
+    nativeBuildInputs =
+      [
+        unstablePkgs.installShellFiles
+        unstablePkgs.makeBinaryWrapper
+      ]
+      ++ lib.optionals stdenv.hostPlatform.isElf [unstablePkgs.autoPatchelfHook];
 
     strictDeps = true;
 

@@ -136,7 +136,7 @@ in {
         "zoom"
       ];
       masApps = {
-        "Amphetamine" = 937984704;
+        # "Amphetamine" = 937984704;
         # "Blackmagic Disk Speed Test" = 425264550;
         # "CleanMyMac" = 1339170533;
         # "GarageBand" = 682658836;
@@ -145,10 +145,10 @@ in {
         # "MultiVNC" = 6738012997;
         # "Numbers" = 409203825;
         # "Pages" = 409201541;
-        "Tailscale" = 1475387142;
+        # "Tailscale" = 1475387142;
         # "WiFi Explorer Lite" = 1408727408;
         # "Windows App" = 1295203266;
-        "Xcode" = 497799835;
+        # "Xcode" = 497799835;
       };
     };
 
