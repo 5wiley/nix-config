@@ -292,7 +292,19 @@ in {
           actions = mkIf cfg.features.actions {
             ENABLED = true;
             DEFAULT_ACTIONS_URL = "https://code.forgejo.org";
-            ENDLESS_TASK_TIMEOUT = "6h";
+            # Server-side hard limit on a running task. Once a task exceeds this
+            # timeout, Forgejo archives its log file and marks it RESULT_FAILURE,
+            # regardless of the workflow's own `timeout-minutes`. The next
+            # heartbeat from the runner then races against the archive: any
+            # ReportLog/UpdateLog call after archival returns
+            # `already_exists: log file has been archived`, which the runner
+            # retries 10 times before giving up (#392).
+            #
+            # The build-hosts job in nix-check.yaml has `timeout-minutes: 600`
+            # (10h) for full host-matrix builds. Set this above that limit so
+            # the workflow timeout wins, not the server's. Runs 1164, 1172,
+            # 1192 (and others) all hit the previous 6h ceiling.
+            ENDLESS_TASK_TIMEOUT = "12h";
             # Nix builds can be silent for extended periods during compilation,
             # causing the default 10m heartbeat timeout to kill running tasks.
             # The runner reports "log file has been archived" when this fires.
