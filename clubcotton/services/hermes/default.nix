@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 with lib; let
@@ -97,6 +98,8 @@ in {
       after = ["network-online.target"];
       wants = ["network-online.target"];
       wantedBy = ["multi-user.target"];
+
+      path = [pkgs.bash pkgs.coreutils];
 
       environment = {
         HOME = cfg.home;
