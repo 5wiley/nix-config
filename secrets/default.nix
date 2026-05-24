@@ -435,4 +435,11 @@ in {
     owner = "larry";
     group = "users";
   };
+
+  age.secrets."freshrss-env-larry" = lib.mkIf isBotHost {
+    file = ./freshrss-env-larry.age;
+    owner = "larry";
+    group = "users";
+    mode = "0400";
+  };
 }
