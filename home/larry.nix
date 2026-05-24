@@ -4,6 +4,7 @@
   lib,
   unstablePkgs,
   crushPackage,
+  fjPackage,
   localPackages,
   inputs,
   ...
@@ -236,6 +237,7 @@
 
     # Forgejo/Git workflow
     tea # Gitea/Forgejo CLI
+    fjPackage # Forgejo CLI (gh clone)
 
     # Development
     tldr # simplified man pages
