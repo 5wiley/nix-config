@@ -304,6 +304,7 @@
       "forgejo"
       "atuin"
       "open-webui"
+      "hermes"
       "harmonia"
     ];
 

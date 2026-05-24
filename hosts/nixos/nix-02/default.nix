@@ -44,6 +44,7 @@ in {
     tailscale.enable = true;
     nut-client.enable = true;
     hyprland.enable = true;
+    hermes.enable = true;
 
     auto-upgrade = {
       enable = true;
