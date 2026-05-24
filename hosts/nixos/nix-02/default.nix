@@ -44,7 +44,10 @@ in {
     tailscale.enable = true;
     nut-client.enable = true;
     hyprland.enable = true;
-    hermes.enable = true;
+    hermes = {
+      enable = true;
+      forgejoIssueWebhook.enable = true;
+    };
 
     auto-upgrade = {
       enable = true;

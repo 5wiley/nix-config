@@ -112,4 +112,5 @@ in {
 
   # Forgejo API token for auto-upgrade workflow dispatch
   "forgejo-dispatch-token.age".publicKeys = users ++ systems;
+  "forgejo-hermes-webhook-secret.age".publicKeys = just_larry ++ botSystems;
 }
