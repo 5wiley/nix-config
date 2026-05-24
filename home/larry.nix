@@ -25,6 +25,7 @@
   # Add pnpm local bin to user's shell PATH
   home.sessionPath = [
     "/home/larry/node_modules/.bin"
+    "/home/larry/.local/bin"
   ];
 
   # ─────────────────────────────────────────────────────────────
