@@ -183,6 +183,11 @@
     package = unstablePkgs.mise;
   };
 
+  programs.codex = {
+    enable = true;
+    package = unstablePkgs.codex;
+  };
+
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;

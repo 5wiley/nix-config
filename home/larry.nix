@@ -180,6 +180,11 @@
     };
   };
 
+  programs.codex = {
+    enable = true;
+    package = unstablePkgs.codex;
+  };
+
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
