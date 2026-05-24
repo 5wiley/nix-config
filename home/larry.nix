@@ -244,6 +244,8 @@
     nodejs_24
     claude-code # Anthropic's Claude Code CLI
     crushPackage # AI coding agent
+    uv
+    python311
 
     # Nix tools
     nil # nix LSP
