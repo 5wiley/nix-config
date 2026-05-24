@@ -30,8 +30,8 @@ in {
 
     group = mkOption {
       type = types.str;
-      default = cfg.user;
-      defaultText = literalExpression "config.services.clubcotton.hermes.user";
+      default = config.users.users.${cfg.user}.group;
+      defaultText = literalExpression "config.users.users.\${config.services.clubcotton.hermes.user}.group";
       description = "Group used to run the Hermes dashboard service.";
     };
 
