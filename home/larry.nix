@@ -69,13 +69,14 @@
       # Starship prompt
       eval "$(starship init zsh)"
 
-      # Wire up completions for aliased commands
-      compdef ls=eza
-      compdef ll=eza
-      compdef lt=eza
-      compdef cat=bat
-      compdef grep=rg
-      compdef find=fd
+      # Wire up completions for aliased commands.
+      # Use `compdef _func cmd` (not `compdef cmd=other`) — the alias form
+      # requires the target's completion to be pre-registered, which doesn't
+      # happen for autoloaded completion functions until first use.
+      compdef _eza ls ll lt
+      compdef _bat cat
+      compdef _rg grep
+      compdef _fd find
 
       # Better history
       setopt HIST_IGNORE_DUPS
