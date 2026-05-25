@@ -124,6 +124,12 @@ in {
       services."${cfg.tailnetHostname}" = {
         ephemeral = true;
         toURL = "http://${cfg.host}:${toString cfg.port}/";
+        # Hermes dashboard validates the Host header against the address it
+        # was bound to and rejects anything else with HTTP 400 (Invalid Host
+        # header). tsnsrv's recommendedProxyHeaders default forwards the
+        # original tailnet hostname, which the dashboard refuses. Disable it
+        # so the proxied request uses the upstream URL's host (cfg.host).
+        extraArgs = ["-recommendedProxyHeaders=false"];
       };
     };
   };
