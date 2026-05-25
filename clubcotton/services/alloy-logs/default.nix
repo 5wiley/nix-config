@@ -37,7 +37,31 @@ with lib; let
     }
   '';
 
-  fileSourceBlocks = concatStringsSep "\n" (map mkFileSourceBlock cfg.fileTargets);
+  hermesFileTargets = [
+    {
+      job = "hermes_logs";
+      path = "/home/*/.hermes/logs/*.log";
+      extraLabels.log_type = "hermes-log";
+    }
+    {
+      job = "hermes_sessions";
+      path = "/home/*/.hermes/sessions/*.json*";
+      extraLabels.log_type = "hermes-session";
+    }
+    {
+      job = "hermes_profile_logs";
+      path = "/home/*/.hermes/profiles/*/logs/*.log";
+      extraLabels.log_type = "hermes-log";
+    }
+    {
+      job = "hermes_profile_sessions";
+      path = "/home/*/.hermes/profiles/*/sessions/*.json*";
+      extraLabels.log_type = "hermes-session";
+    }
+  ];
+
+  effectiveFileTargets = optionals cfg.hermesLogs.enable hermesFileTargets ++ cfg.fileTargets;
+  fileSourceBlocks = concatStringsSep "\n" (map mkFileSourceBlock effectiveFileTargets);
 
   # --- Noise filter helpers ---
 
@@ -331,7 +355,19 @@ in {
         };
       });
       default = [];
-      description = "File paths to tail and forward to Loki.";
+      description = "Additional file paths to tail and forward to Loki.";
+    };
+
+    hermesLogs.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Tail Hermes file logs and session transcripts from every user's
+        ~/.hermes directory, including future profile directories under
+        ~/.hermes/profiles/*/. This intentionally matches only logs/*.log
+        and sessions/*.json* so config.yaml, .env, auth.json, and other
+        Hermes state files are not shipped.
+      '';
     };
 
     otelReceiver = {
@@ -405,14 +441,10 @@ in {
       otelCfg.httpPort
     ];
 
-    # DynamicUser=true (set by the upstream alloy module) implies PrivateTmp,
-    # so Alloy can't see files under /tmp. Bind-mount each fileTarget's parent
-    # directory read-only into the service namespace.
-    systemd.services.alloy.serviceConfig.BindReadOnlyPaths = let
-      # Extract parent directory from a glob path (strip the filename/glob portion)
-      parentDir = path: dirOf path;
-      dirs = unique (map (t: parentDir t.path) cfg.fileTargets);
-    in
-      mkIf (cfg.fileTargets != []) dirs;
+    # Hermes session transcripts are mode 0600 under users' 0700 home
+    # directories. Run Alloy without DynamicUser for file tailing so it can
+    # read those files while still limiting collection to the explicit globs
+    # above (logs/*.log and sessions/*.json*; no config.yaml/.env/auth.json).
+    systemd.services.alloy.serviceConfig.DynamicUser = mkIf (effectiveFileTargets != []) (mkForce false);
   };
 }
