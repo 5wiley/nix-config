@@ -24,22 +24,27 @@ with lib; let
   webhookCfg = cfg.forgejoIssueWebhook;
 
   webhookPrompt = ''
-    Forgejo issue assignment webhook received.
+    Forgejo issue or pull request mention webhook received.
 
     Repository: {repository.full_name}
     Action: {action}
     Issue: #{issue.number} - {issue.title}
     Issue URL: {issue.html_url}
-    Assignees: {issue.assignees}
+    Pull request: #{pull_request.number} - {pull_request.title}
+    Pull request URL: {pull_request.html_url}
+    Comment URL: {comment.html_url}
+    Comment body: {comment.body}
+    Mentioned user: {hermes_forgejo_proxy.matched_user}
+    Eyes reaction added by proxy: {hermes_forgejo_proxy.reaction_added}
 
     This webhook has already been validated and filtered by the local nix-config
-    Forgejo-to-Hermes proxy. The issue is assigned to larry.
+    Forgejo-to-Hermes proxy. The issue or pull request comment mentions larry.
 
-    Implement the issue:
-    1. Fetch the full issue details from Forgejo.
+    Triage and implement the request:
+    1. Fetch the full issue or pull request details from Forgejo.
     2. Clone or update the repository checkout for {repository.full_name}.
-    3. Create an implementation branch named for issue #{issue.number}.
-    4. Make the requested change.
+    3. Create an implementation branch named for the issue, PR, or comment context.
+    4. Determine what the mention asks larry to do, then make the requested change.
     5. Run the relevant formatter, tests, and/or NixOS build checks.
     6. Commit and push the branch.
     7. Open a Forgejo pull request or update an existing one.
@@ -49,7 +54,7 @@ with lib; let
   '';
 
   webhookRoute = {
-    description = "Implement Forgejo issues assigned to larry";
+    description = "Implement Forgejo issues or pull requests that mention larry";
     secret = "INSECURE_NO_AUTH";
     prompt = webhookPrompt;
     skills = ["forgejo-fj" "github-pr-workflow"];
@@ -119,7 +124,7 @@ in {
     };
 
     forgejoIssueWebhook = {
-      enable = mkEnableOption "Forgejo issue-assignment webhook proxy into Hermes";
+      enable = mkEnableOption "Forgejo issue and pull request mention webhook proxy into Hermes";
 
       proxyHost = mkOption {
         type = types.str;
@@ -136,7 +141,7 @@ in {
       proxyPath = mkOption {
         type = types.str;
         default = "/webhooks/forgejo/issues/assigned-larry";
-        description = "HTTP path that Forgejo should POST issue webhooks to.";
+        description = "HTTP path that Forgejo should POST issue and pull request webhooks to.";
       };
 
       hermesHost = mkOption {
@@ -160,7 +165,26 @@ in {
       assignee = mkOption {
         type = types.str;
         default = "larry";
-        description = "Forgejo username whose issue assignments should trigger Hermes.";
+        description = "Deprecated alias for targetUser.";
+      };
+
+      targetUser = mkOption {
+        type = types.str;
+        default = "larry";
+        description = "Forgejo username whose @mentions should trigger Hermes.";
+      };
+
+      forgejoApiBase = mkOption {
+        type = types.str;
+        default = "https://forgejo.bobtail-clownfish.ts.net/api/v1";
+        description = "Forgejo API base URL used to add acknowledgement reactions.";
+      };
+
+      forgejoTokenFile = mkOption {
+        type = types.nullOr types.path;
+        default = config.age.secrets."forgejo-token-larry".path;
+        defaultText = literalExpression ''config.age.secrets."forgejo-token-larry".path'';
+        description = "Optional Forgejo API token file used to add eyes reactions to mention comments.";
       };
 
       secretFile = mkOption {
@@ -268,7 +292,7 @@ in {
     };
 
     systemd.services.forgejo-hermes-webhook-proxy = mkIf webhookCfg.enable {
-      description = "Validate Forgejo issue-assignment webhooks and forward them to Hermes";
+      description = "Validate Forgejo mention webhooks and forward them to Hermes";
       after = ["network-online.target" "hermes-gateway.service"];
       wants = ["network-online.target" "hermes-gateway.service"];
       wantedBy = ["multi-user.target"];
@@ -279,7 +303,8 @@ in {
         ROUTE_PATH = webhookCfg.proxyPath;
         HERMES_URL = "http://${webhookCfg.hermesHost}:${toString webhookCfg.hermesPort}/webhooks/${webhookCfg.routeName}";
         FORGEJO_WEBHOOK_SECRET_FILE = webhookCfg.secretFile;
-        TARGET_ASSIGNEE = webhookCfg.assignee;
+        TARGET_USER = webhookCfg.targetUser;
+        FORGEJO_API_BASE = webhookCfg.forgejoApiBase;
       };
 
       serviceConfig = {
@@ -293,7 +318,8 @@ in {
         PrivateTmp = true;
         ProtectSystem = "strict";
         ProtectHome = "read-only";
-        ReadOnlyPaths = [webhookCfg.secretFile cfg.home];
+        Environment = lib.optional (webhookCfg.forgejoTokenFile != null) "FORGEJO_TOKEN_FILE=${webhookCfg.forgejoTokenFile}";
+        ReadOnlyPaths = [webhookCfg.secretFile cfg.home] ++ lib.optional (webhookCfg.forgejoTokenFile != null) webhookCfg.forgejoTokenFile;
       };
     };
 
