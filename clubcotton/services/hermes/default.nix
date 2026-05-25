@@ -249,6 +249,8 @@ in {
       wants = ["network-online.target"] ++ lib.optional webhookCfg.enable "hermes-configure-webhooks.service";
       wantedBy = ["multi-user.target"];
 
+      path = [pkgs.bash pkgs.coreutils];
+
       environment = {
         HOME = cfg.home;
         HERMES_HOME = "${cfg.home}/.hermes";
