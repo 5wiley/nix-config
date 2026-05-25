@@ -37,28 +37,39 @@ with lib; let
     }
   '';
 
-  hermesFileTargets = [
+  # Build one Hermes file target per normal /home user so the Loki log_type
+  # records the owner of the collected file (for example hermes-log-larry).
+  # Alloy file globs are static labels, so this cannot be derived from a
+  # wildcarded /home/* path after collection.
+  hermesUsers = filterAttrs (_: user: (user.isNormalUser or false) && hasPrefix "/home/" (user.home or "")) config.users.users;
+
+  mkHermesFileTargets = userName: user: let
+    home = user.home or "/home/${userName}";
+    componentUser = replaceStrings ["-" "."] ["_" "_"] userName;
+  in [
     {
-      job = "hermes_logs";
-      path = "/home/*/.hermes/logs/*.log";
-      extraLabels.log_type = "hermes-log";
+      job = "hermes_logs_${componentUser}";
+      path = "${home}/.hermes/logs/*.log";
+      extraLabels.log_type = "hermes-log-${userName}";
     }
     {
-      job = "hermes_sessions";
-      path = "/home/*/.hermes/sessions/*.json*";
-      extraLabels.log_type = "hermes-session";
+      job = "hermes_sessions_${componentUser}";
+      path = "${home}/.hermes/sessions/*.json*";
+      extraLabels.log_type = "hermes-session-${userName}";
     }
     {
-      job = "hermes_profile_logs";
-      path = "/home/*/.hermes/profiles/*/logs/*.log";
-      extraLabels.log_type = "hermes-log";
+      job = "hermes_profile_logs_${componentUser}";
+      path = "${home}/.hermes/profiles/*/logs/*.log";
+      extraLabels.log_type = "hermes-log-${userName}";
     }
     {
-      job = "hermes_profile_sessions";
-      path = "/home/*/.hermes/profiles/*/sessions/*.json*";
-      extraLabels.log_type = "hermes-session";
+      job = "hermes_profile_sessions_${componentUser}";
+      path = "${home}/.hermes/profiles/*/sessions/*.json*";
+      extraLabels.log_type = "hermes-session-${userName}";
     }
   ];
+
+  hermesFileTargets = concatLists (mapAttrsToList mkHermesFileTargets hermesUsers);
 
   effectiveFileTargets = optionals cfg.hermesLogs.enable hermesFileTargets ++ cfg.fileTargets;
   fileSourceBlocks = concatStringsSep "\n" (map mkFileSourceBlock effectiveFileTargets);
