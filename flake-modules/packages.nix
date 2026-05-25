@@ -18,6 +18,8 @@
         weave = pkgs.callPackage ../pkgs/weave {};
         # pg-scram-hash: Generate PostgreSQL SCRAM-SHA-256 password hashes
         pg-scram-hash = pkgs.callPackage ../pkgs/pg-scram-hash {};
+        # hermes-webhook-tools: Configure Hermes webhook routes and proxy Forgejo webhooks
+        hermes-webhook-tools = pkgs.callPackage ../pkgs/hermes-webhook-tools {};
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -50,7 +52,7 @@
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash;
+        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash hermes-webhook-tools;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;

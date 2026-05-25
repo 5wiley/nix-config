@@ -107,6 +107,12 @@ in {
     file = ./forgejo-dispatch-token.age;
   };
 
+  age.secrets."forgejo-hermes-webhook-secret" = lib.mkIf config.services.clubcotton.hermes.forgejoIssueWebhook.enable {
+    file = ./forgejo-hermes-webhook-secret.age;
+    owner = "larry";
+    group = "users";
+  };
+
   age.secrets."honcho-database" = lib.mkIf config.services.clubcotton.postgresql.honcho.enable {
     file = ./honcho-database.age;
     owner = "postgres";
