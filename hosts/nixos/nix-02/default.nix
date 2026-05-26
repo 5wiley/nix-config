@@ -47,6 +47,7 @@ in {
     hermes = {
       enable = true;
       forgejoIssueWebhook.enable = true;
+      alertmanagerWebhook.enable = true;
     };
 
     auto-upgrade = {

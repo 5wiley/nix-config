@@ -26,6 +26,15 @@ in {
             group_interval = "1m";
             repeat_interval = "1h";
           }
+          # Send all non-Watchdog alerts to Hermes and then preserve the
+          # existing pushover notification behavior with the following route.
+          {
+            receiver = "hermes";
+            continue = true;
+          }
+          {
+            receiver = "pushover";
+          }
         ];
       };
       receivers = [
@@ -45,6 +54,16 @@ in {
             {
               url = "https://hc-ping.com/9961cb1a-4367-45b8-870b-2621a0996c28";
               send_resolved = false;
+            }
+          ];
+        }
+        {
+          name = "hermes";
+          webhook_configs = [
+            {
+              url = "https://hermes-alertmanager-webhook.bobtail-clownfish.ts.net/webhooks/alertmanager/hermes";
+              send_resolved = true;
+              max_alerts = 10;
             }
           ];
         }
