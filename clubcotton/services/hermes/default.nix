@@ -82,14 +82,14 @@ with lib; let
     Required workflow:
     1. Parse the Alertmanager payload and summarize which alert(s) are firing or resolved.
     2. If the status is resolved, still create/update an issue only if the alert suggests
-       follow-up is needed; otherwise send larry a concise home-channel note and stop.
+       follow-up is needed; otherwise send the user a concise home-channel note and stop.
     3. Use available diagnostics such as Loki logs, local system status, Forgejo CI, and
        the nix-config checkout to investigate likely root cause.
     4. Create a Forgejo issue in bcotton/nix-config with the alert details, suspected
        root cause, evidence, links, and next steps.
     5. If a safe config/code fix is possible, create a branch, commit it, push it, and
        open a PR against bcotton/nix-config. Link the PR from the issue.
-    6. Send larry a note over the home channel on Telegram with: alert name/status,
+    6. Send the user a note over the home channel on Telegram with: alert name/status,
        likely cause, issue URL, PR URL if created, and any urgent manual action.
 
     Use Forgejo via fj. Do not print tokens or secrets.
