@@ -54,8 +54,14 @@ if subscriptions_path.exists():
 else:
     subscriptions = {}
 
+routes_json_file = os.environ.get("HERMES_WEBHOOK_ROUTES_JSON_FILE")
 routes_json = os.environ.get("HERMES_WEBHOOK_ROUTES_JSON")
-if routes_json:
+if routes_json_file:
+    with open(routes_json_file, "r", encoding="utf-8") as fh:
+        route_files = json.load(fh)
+    if not isinstance(route_files, dict):
+        raise SystemExit("HERMES_WEBHOOK_ROUTES_JSON_FILE must contain a JSON object")
+elif routes_json:
     route_files = json.loads(routes_json)
     if not isinstance(route_files, dict):
         raise SystemExit("HERMES_WEBHOOK_ROUTES_JSON must be a JSON object")

@@ -112,7 +112,7 @@ with lib; let
     // lib.optionalAttrs alertmanagerWebhookCfg.enable {
       "${alertmanagerWebhookCfg.routeName}" = alertmanagerWebhookRouteFile;
     };
-  webhookRouteFilesJson = builtins.toJSON webhookRouteFiles;
+  webhookRouteFilesJson = pkgs.writeText "hermes-webhook-route-files.json" (builtins.toJSON webhookRouteFiles);
 in {
   options.services.clubcotton.${service} = {
     enable = mkEnableOption "Hermes Agent dashboard";
@@ -342,7 +342,7 @@ in {
           "HERMES_WEBHOOK_HOST=${forgejoWebhookCfg.hermesHost}"
           "HERMES_WEBHOOK_PORT=${toString forgejoWebhookCfg.hermesPort}"
           "HERMES_WEBHOOK_SECRET=INSECURE_NO_AUTH"
-          "HERMES_WEBHOOK_ROUTES_JSON=${webhookRouteFilesJson}"
+          "HERMES_WEBHOOK_ROUTES_JSON_FILE=${webhookRouteFilesJson}"
         ];
         ExecStart = "${localPackages.hermes-webhook-tools}/bin/configure-hermes-webhook";
         User = cfg.user;
