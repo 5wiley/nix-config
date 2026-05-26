@@ -54,10 +54,17 @@ if subscriptions_path.exists():
 else:
     subscriptions = {}
 
-route_file = env("HERMES_WEBHOOK_ROUTE_FILE")
-route_name = env("HERMES_WEBHOOK_ROUTE_NAME")
-with open(route_file, "r", encoding="utf-8") as fh:
-    subscriptions[route_name] = json.load(fh)
+routes_json = os.environ.get("HERMES_WEBHOOK_ROUTES_JSON")
+if routes_json:
+    route_files = json.loads(routes_json)
+    if not isinstance(route_files, dict):
+        raise SystemExit("HERMES_WEBHOOK_ROUTES_JSON must be a JSON object")
+else:
+    route_files = {env("HERMES_WEBHOOK_ROUTE_NAME"): env("HERMES_WEBHOOK_ROUTE_FILE")}
+
+for route_name, route_file in route_files.items():
+    with open(route_file, "r", encoding="utf-8") as fh:
+        subscriptions[route_name] = json.load(fh)
 
 fd, tmp = tempfile.mkstemp(
     prefix="webhook_subscriptions.",
