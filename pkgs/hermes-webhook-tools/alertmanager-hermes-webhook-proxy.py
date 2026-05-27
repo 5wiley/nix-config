@@ -60,13 +60,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(413, {"error": "invalid payload size"})
             return
         body = self.rfile.read(content_length)
+        body_text = body.decode("utf-8", errors="replace")
+        logging.info("Received Alertmanager webhook payload (%d bytes): %s", len(body), body_text)
         try:
             payload = json.loads(body)
-        except json.JSONDecodeError:
-            self.send_json(400, {"error": "invalid json"})
+        except json.JSONDecodeError as exc:
+            logging.warning("Failed to parse Alertmanager webhook payload as JSON: %s; body=%s", exc, body_text)
+            self.send_json(400, {"error": "invalid json", "detail": str(exc)})
             return
 
         if not isinstance(payload, dict) or not isinstance(payload.get("alerts"), list):
+            logging.warning("Rejected Alertmanager webhook payload with unexpected shape: %s", body_text)
             self.send_json(400, {"error": "not an Alertmanager webhook payload"})
             return
 
