@@ -46,7 +46,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
-        if self.path == "/health":
+        if self.path in ("/", "/health"):
             self.send_json(200, {"status": "ok"})
         else:
             self.send_json(404, {"error": "not found"})
