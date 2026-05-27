@@ -378,6 +378,18 @@ in {
             ipAddress = "192.168.20.195";
             hostName = "iton-meter";
           }
+          {
+            scope = "vlan20";
+            macAddress = "10:20:BA:5D:34:40";
+            ipAddress = "192.168.20.148";
+            hostName = "new-thermostat";
+          }
+          {
+            scope = "vlan20";
+            macAddress = "9C:9C:1F:8A:DF:41";
+            ipAddress = "192.168.20.136";
+            hostName = "swamp-cooler";
+          }
           # esp-keyboard-wake removed: duplicate MAC D2:21:F9:29:F6:B5 (same as plant-monitor)
           # Re-add with correct MAC when known
         ];
@@ -525,6 +537,18 @@ in {
               ipAddress = "192.168.20.174";
               createPtrRecord = true;
               aliases = ["frigate"];
+            }
+            {
+              name = "new-thermostat";
+              type = "A";
+              ipAddress = "192.168.20.148";
+              createPtrRecord = true;
+            }
+            {
+              name = "swamp-cooler";
+              type = "A";
+              ipAddress = "192.168.20.136";
+              createPtrRecord = true;
             }
           ];
         }
