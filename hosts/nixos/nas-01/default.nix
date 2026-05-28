@@ -768,6 +768,12 @@ in {
   # Always run `nixos-rebuild dry-activate` before switching.
   disko.zfs = {
     enable = true;
+    # `normalization` is a create-time-only ZFS property. Existing pools were
+    # created with normalization=none and disko-zfs cannot change it; it logs
+    # an ERROR per pool on every activation. Ignore the property so disko-zfs
+    # skips the comparison entirely. The rootFsOptions value (formD) still
+    # applies to any pool created fresh via disko. See issue #396.
+    settings.ignoredProperties = ["normalization"];
     # Incus stores its own datasets inside ssdpool/local/incus and creates them
     # dynamically (one per instance/image/etc.). disko-zfs must not destroy
     # these on activation.
