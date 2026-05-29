@@ -39,6 +39,7 @@
   in
     [
       inputs.vscode-server.homeModules.default
+      inputs.nix-index-database.homeModules.default
       ./modules/atuin.nix
       ./modules/git.nix
       ./modules/tmux-plugins.nix
@@ -202,6 +203,11 @@
       }
     '';
   };
+
+  # Nix workflow tools from
+  # https://iampavel.dev/blog/best-nixos-tools
+  # nix-index-database supplies a prebuilt index for nix-locate and comma.
+  programs.nix-index-database.comma.enable = true;
 
   programs.fzf = {
     package = unstablePkgs.fzf;
@@ -406,6 +412,7 @@
       autotest = "watchexec -c clear -o do-nothing --delay-run 100ms --exts go 'pkg=\".\${WATCHEXEC_COMMON_PATH/\$PWD/}/...\"; echo \"running tests for \$pkg\"; go test \"\$pkg\"'";
       claude-fork = "claude --fork-session --continue";
       claudep-fork = "claudep --fork-session --continue";
+      nix-options = "xdg-open https://search.nixos.org/options";
       gdn = "git diff | gitnav";
       lg = "lazygit";
       lgs = "lazygit status";
@@ -634,7 +641,10 @@
   programs.eza.enable = true;
 
   #  programs.neovim.enable = true;
-  programs.nix-index.enable = true;
+  programs.nix-index = {
+    enable = true;
+    enableZshIntegration = true;
+  };
   programs.zoxide = {
     enable = true;
     enableZshIntegration = false; # Using zsh-defer for deferred init in initContent
@@ -751,7 +761,12 @@
       golangci-lint
       bun
       nodejs_24
+      nh
+      nix-init
+      nurl
       shellcheck
+      smfh
+      statix
       tea
       yarn-berry
       terraform
