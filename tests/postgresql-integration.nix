@@ -70,6 +70,11 @@
         };
       };
 
+      # The integration test starts PostgreSQL in the VM and exercises the
+      # generated configuration there. Disable the build-time check so root-run
+      # CI containers do not fail by invoking `postgres` directly as root.
+      services.postgresql.checkConfig = false;
+
       # Grant superuser permissions to test-immich user for integration testing
       # This allows Immich to dynamically create extensions like vchord
       services.clubcotton.postgresql.postStartCommands = [
