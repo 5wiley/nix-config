@@ -21,15 +21,9 @@ stdenv.mkDerivation {
 
     mkdir -p $out/bin $out/share/hermes-webhook-tools
     cp configure-hermes-webhook.py $out/share/hermes-webhook-tools/configure-hermes-webhook.py
-    cp forgejo-hermes-webhook-proxy.py $out/share/hermes-webhook-tools/forgejo-hermes-webhook-proxy.py
-    cp alertmanager-hermes-webhook-proxy.py $out/share/hermes-webhook-tools/alertmanager-hermes-webhook-proxy.py
 
     makeWrapper ${python}/bin/python3 $out/bin/configure-hermes-webhook \
       --add-flags $out/share/hermes-webhook-tools/configure-hermes-webhook.py
-    makeWrapper ${python}/bin/python3 $out/bin/forgejo-hermes-webhook-proxy \
-      --add-flags $out/share/hermes-webhook-tools/forgejo-hermes-webhook-proxy.py
-    makeWrapper ${python}/bin/python3 $out/bin/alertmanager-hermes-webhook-proxy \
-      --add-flags $out/share/hermes-webhook-tools/alertmanager-hermes-webhook-proxy.py
 
     runHook postInstall
   '';

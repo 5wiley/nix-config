@@ -47,6 +47,7 @@ in {
     hermes = {
       enable = true;
       forgejoIssueWebhook.enable = true;
+      forgejoCiFailureWebhook.enable = true;
       alertmanagerWebhook.enable = true;
     };
 
