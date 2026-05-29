@@ -95,6 +95,11 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
+    forgejo-webhook-proxy = {
+      url = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/forgejo-webhook-proxy.git";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
     llmfit = {
       url = "github:AlexsJones/llmfit";
       inputs.nixpkgs.follows = "nixpkgs";

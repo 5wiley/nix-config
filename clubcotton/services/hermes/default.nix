@@ -3,6 +3,7 @@
   lib,
   pkgs,
   localPackages,
+  inputs,
   ...
 }:
 with lib; let
@@ -22,8 +23,9 @@ with lib; let
     ++ lib.optional cfg.enableTui "--tui";
 
   forgejoWebhookCfg = cfg.forgejoIssueWebhook;
+  forgejoCiWebhookCfg = cfg.forgejoCiFailureWebhook;
   alertmanagerWebhookCfg = cfg.alertmanagerWebhook;
-  webhookEnabled = forgejoWebhookCfg.enable || alertmanagerWebhookCfg.enable;
+  webhookEnabled = forgejoWebhookCfg.enable || forgejoCiWebhookCfg.enable || alertmanagerWebhookCfg.enable;
 
   webhookPrompt = ''
     Forgejo issue or pull request mention webhook received.
@@ -60,6 +62,54 @@ with lib; let
     secret = "INSECURE_NO_AUTH";
     prompt = webhookPrompt;
     skills = ["forgejo-fj" "github-pr-workflow"];
+    deliver = "log";
+  };
+
+  forgejoCiFailureWebhookPrompt = ''
+    Forgejo CI failure webhook received.
+
+    Repository: {repository.full_name}
+    Event: {event_type}
+    Action: {action}
+    Workflow: {hermes_forgejo_ci_proxy.workflow_name}
+    Run ID: {hermes_forgejo_ci_proxy.run_id}
+    Job ID: {hermes_forgejo_ci_proxy.job_id}
+    Job: {hermes_forgejo_ci_proxy.job_name}
+    Status: {hermes_forgejo_ci_proxy.status}
+    Conclusion: {hermes_forgejo_ci_proxy.conclusion}
+    State: {hermes_forgejo_ci_proxy.state}
+    Branch/ref: {hermes_forgejo_ci_proxy.branch}
+    Commit: {hermes_forgejo_ci_proxy.commit_sha}
+    URL: {hermes_forgejo_ci_proxy.html_url}
+
+    This webhook has already been validated and filtered by the local nix-config
+    Forgejo-to-Hermes CI proxy. It should only fire for terminal failed Forgejo
+    Actions jobs or runs.
+
+    Required autonomous workflow:
+    1. Fetch the full Forgejo run/job details and logs. For bcotton/nix-config,
+       prefer `fj run view` / `fj run logs` and `just ci-analyze <run-id>` when available.
+    2. Determine why the failure is occurring. Distinguish code/config regressions
+       from flaky infrastructure, missing secrets, runner capacity, or unrelated main-branch failures.
+    3. If a safe repository fix is possible, create a branch from the correct base,
+       make the fix, run the relevant formatter/tests/Nix checks, commit, push, and
+       open a Forgejo PR against bcotton/nix-config. If the failure belongs to a PR,
+       target that PR's branch when appropriate instead of opening duplicate work.
+    4. If no safe code/config fix is possible, gather enough evidence to explain the
+       manual action needed and do not invent a PR.
+    5. Send the user a Telegram home-channel message with: failing workflow/job, run
+       URL, suspected root cause, evidence, PR URL if created, verification performed,
+       and any manual action needed. This route delivers Hermes' final response to
+       logs only, so you must explicitly use the messaging/send_message tool.
+
+    Use Forgejo via fj. Do not print tokens or secrets.
+  '';
+
+  forgejoCiFailureWebhookRoute = {
+    description = "Investigate failing Forgejo CI jobs and open remediation PRs";
+    secret = "INSECURE_NO_AUTH";
+    prompt = forgejoCiFailureWebhookPrompt;
+    skills = ["forgejo-fj" "github-pr-workflow" "systematic-debugging"];
     deliver = "log";
   };
 
@@ -104,15 +154,50 @@ with lib; let
   };
 
   forgejoWebhookRouteFile = pkgs.writeText "hermes-forgejo-issue-webhook-route.json" (builtins.toJSON forgejoWebhookRoute);
+  forgejoCiFailureWebhookRouteFile = pkgs.writeText "hermes-forgejo-ci-failure-webhook-route.json" (builtins.toJSON forgejoCiFailureWebhookRoute);
   alertmanagerWebhookRouteFile = pkgs.writeText "hermes-alertmanager-webhook-route.json" (builtins.toJSON alertmanagerWebhookRoute);
   webhookRouteFiles =
     lib.optionalAttrs forgejoWebhookCfg.enable {
       "${forgejoWebhookCfg.routeName}" = forgejoWebhookRouteFile;
     }
+    // lib.optionalAttrs forgejoCiWebhookCfg.enable {
+      "${forgejoCiWebhookCfg.routeName}" = forgejoCiFailureWebhookRouteFile;
+    }
     // lib.optionalAttrs alertmanagerWebhookCfg.enable {
       "${alertmanagerWebhookCfg.routeName}" = alertmanagerWebhookRouteFile;
     };
   webhookRouteFilesJson = pkgs.writeText "hermes-webhook-route-files.json" (builtins.toJSON webhookRouteFiles);
+
+  proxyPackage = inputs.forgejo-webhook-proxy.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  proxyRoutes =
+    lib.optional forgejoWebhookCfg.enable {
+      name = "forgejo-mentions";
+      kind = "forgejo-mention";
+      path = forgejoWebhookCfg.proxyPath;
+      hermes_url = "http://${forgejoWebhookCfg.hermesHost}:${toString forgejoWebhookCfg.hermesPort}/webhooks/${forgejoWebhookCfg.routeName}";
+      secret_file = forgejoWebhookCfg.secretFile;
+      target_user = forgejoWebhookCfg.targetUser;
+      forgejo_api_base = forgejoWebhookCfg.forgejoApiBase;
+      forgejo_token_file = forgejoWebhookCfg.forgejoTokenFile;
+    }
+    ++ lib.optional forgejoCiWebhookCfg.enable {
+      name = "forgejo-ci-failures";
+      kind = "forgejo-ci-failure";
+      path = forgejoCiWebhookCfg.proxyPath;
+      hermes_url = "http://${forgejoWebhookCfg.hermesHost}:${toString forgejoWebhookCfg.hermesPort}/webhooks/${forgejoCiWebhookCfg.routeName}";
+      secret_file = forgejoCiWebhookCfg.secretFile;
+    }
+    ++ lib.optional alertmanagerWebhookCfg.enable {
+      name = "alertmanager";
+      kind = "alertmanager";
+      path = alertmanagerWebhookCfg.proxyPath;
+      hermes_url = "http://${forgejoWebhookCfg.hermesHost}:${toString forgejoWebhookCfg.hermesPort}/webhooks/${alertmanagerWebhookCfg.routeName}";
+    };
+  proxyRoutesJson = pkgs.writeText "hermes-webhook-proxy-routes.json" (builtins.toJSON {
+    listen_host = forgejoWebhookCfg.proxyHost;
+    listen_port = forgejoWebhookCfg.proxyPort;
+    routes = proxyRoutes;
+  });
 in {
   options.services.clubcotton.${service} = {
     enable = mkEnableOption "Hermes Agent dashboard";
@@ -252,6 +337,47 @@ in {
       };
     };
 
+    forgejoCiFailureWebhook = {
+      enable = mkEnableOption "Forgejo CI failure webhook proxy into Hermes";
+
+      proxyHost = mkOption {
+        type = types.str;
+        default = "127.0.0.1";
+        description = "Address for the Forgejo CI failure webhook proxy to bind to.";
+      };
+
+      proxyPort = mkOption {
+        type = types.port;
+        default = 8656;
+        description = "Local port for the Forgejo CI failure webhook proxy.";
+      };
+
+      proxyPath = mkOption {
+        type = types.str;
+        default = "/webhooks/forgejo/actions/failures";
+        description = "HTTP path that Forgejo should POST Actions webhooks to.";
+      };
+
+      routeName = mkOption {
+        type = types.str;
+        default = "forgejo-ci-failure-investigation";
+        description = "Hermes webhook subscription route name used by the Forgejo CI failure proxy.";
+      };
+
+      secretFile = mkOption {
+        type = types.path;
+        default = config.age.secrets."forgejo-hermes-webhook-secret".path;
+        defaultText = literalExpression ''config.age.secrets."forgejo-hermes-webhook-secret".path'';
+        description = "Path containing the Forgejo webhook shared secret.";
+      };
+
+      tailnetHostname = mkOption {
+        type = types.nullOr types.str;
+        default = "hermes-forgejo-ci-webhook";
+        description = "Tailnet hostname exposing the Forgejo CI failure webhook proxy.";
+      };
+    };
+
     alertmanagerWebhook = {
       enable = mkEnableOption "Prometheus Alertmanager webhook proxy into Hermes";
 
@@ -375,62 +501,32 @@ in {
       };
     };
 
-    systemd.services.forgejo-hermes-webhook-proxy = mkIf forgejoWebhookCfg.enable {
-      description = "Validate Forgejo mention webhooks and forward them to Hermes";
+    systemd.services.hermes-webhook-proxy = mkIf webhookEnabled {
+      description = "Validate and route Forgejo/Alertmanager webhooks into Hermes";
       after = ["network-online.target" "hermes-gateway.service"];
       wants = ["network-online.target" "hermes-gateway.service"];
       wantedBy = ["multi-user.target"];
 
       environment = {
-        LISTEN_HOST = forgejoWebhookCfg.proxyHost;
-        LISTEN_PORT = toString forgejoWebhookCfg.proxyPort;
-        ROUTE_PATH = forgejoWebhookCfg.proxyPath;
-        HERMES_URL = "http://${forgejoWebhookCfg.hermesHost}:${toString forgejoWebhookCfg.hermesPort}/webhooks/${forgejoWebhookCfg.routeName}";
-        FORGEJO_WEBHOOK_SECRET_FILE = forgejoWebhookCfg.secretFile;
-        TARGET_USER = forgejoWebhookCfg.targetUser;
-        FORGEJO_API_BASE = forgejoWebhookCfg.forgejoApiBase;
+        ROUTES_JSON_FILE = proxyRoutesJson;
       };
 
       serviceConfig = {
         Type = "simple";
         User = cfg.user;
         Group = cfg.group;
-        ExecStart = "${localPackages.hermes-webhook-tools}/bin/forgejo-hermes-webhook-proxy";
+        ExecStart = "${proxyPackage}/bin/forgejo-webhook-proxy";
         Restart = "on-failure";
         RestartSec = "5s";
         NoNewPrivileges = true;
         PrivateTmp = true;
         ProtectSystem = "strict";
         ProtectHome = "read-only";
-        Environment = lib.optional (forgejoWebhookCfg.forgejoTokenFile != null) "FORGEJO_TOKEN_FILE=${forgejoWebhookCfg.forgejoTokenFile}";
-        ReadOnlyPaths = [forgejoWebhookCfg.secretFile cfg.home] ++ lib.optional (forgejoWebhookCfg.forgejoTokenFile != null) forgejoWebhookCfg.forgejoTokenFile;
-      };
-    };
-
-    systemd.services.alertmanager-hermes-webhook-proxy = mkIf alertmanagerWebhookCfg.enable {
-      description = "Forward Prometheus Alertmanager webhooks to Hermes";
-      after = ["network-online.target" "hermes-gateway.service"];
-      wants = ["network-online.target" "hermes-gateway.service"];
-      wantedBy = ["multi-user.target"];
-
-      environment = {
-        LISTEN_HOST = alertmanagerWebhookCfg.proxyHost;
-        LISTEN_PORT = toString alertmanagerWebhookCfg.proxyPort;
-        ROUTE_PATH = alertmanagerWebhookCfg.proxyPath;
-        HERMES_URL = "http://${forgejoWebhookCfg.hermesHost}:${toString forgejoWebhookCfg.hermesPort}/webhooks/${alertmanagerWebhookCfg.routeName}";
-      };
-
-      serviceConfig = {
-        Type = "simple";
-        User = cfg.user;
-        Group = cfg.group;
-        ExecStart = "${localPackages.hermes-webhook-tools}/bin/alertmanager-hermes-webhook-proxy";
-        Restart = "on-failure";
-        RestartSec = "5s";
-        NoNewPrivileges = true;
-        PrivateTmp = true;
-        ProtectSystem = "strict";
-        ProtectHome = "read-only";
+        ReadOnlyPaths =
+          [cfg.home]
+          ++ lib.optional forgejoWebhookCfg.enable forgejoWebhookCfg.secretFile
+          ++ lib.optional forgejoCiWebhookCfg.enable forgejoCiWebhookCfg.secretFile
+          ++ lib.optional (forgejoWebhookCfg.enable && forgejoWebhookCfg.forgejoTokenFile != null) forgejoWebhookCfg.forgejoTokenFile;
       };
     };
 
@@ -459,13 +555,22 @@ in {
           toURL = "http://${forgejoWebhookCfg.proxyHost}:${toString forgejoWebhookCfg.proxyPort}/";
         };
       })
+      (mkIf (forgejoCiWebhookCfg.enable && forgejoCiWebhookCfg.tailnetHostname != null && forgejoCiWebhookCfg.tailnetHostname != "") {
+        enable = true;
+        defaults.authKeyPath = clubcotton.tailscaleAuthKeyPath;
+
+        services."${forgejoCiWebhookCfg.tailnetHostname}" = {
+          ephemeral = true;
+          toURL = "http://${forgejoWebhookCfg.proxyHost}:${toString forgejoWebhookCfg.proxyPort}/";
+        };
+      })
       (mkIf (alertmanagerWebhookCfg.enable && alertmanagerWebhookCfg.tailnetHostname != null && alertmanagerWebhookCfg.tailnetHostname != "") {
         enable = true;
         defaults.authKeyPath = clubcotton.tailscaleAuthKeyPath;
 
         services."${alertmanagerWebhookCfg.tailnetHostname}" = {
           ephemeral = true;
-          toURL = "http://${alertmanagerWebhookCfg.proxyHost}:${toString alertmanagerWebhookCfg.proxyPort}/";
+          toURL = "http://${forgejoWebhookCfg.proxyHost}:${toString forgejoWebhookCfg.proxyPort}/";
         };
       })
     ];
