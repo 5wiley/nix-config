@@ -17,10 +17,24 @@ jobs:
       options: --user root
     steps:
       - name: Setup SSH key for distributed builds
+        env:
+          NIX_BUILDER_KEY: ${{ secrets.NIX_BUILDER_KEY }}
         run: |
-          mkdir -p /run/secrets
-          echo "${{ secrets.NIX_BUILDER_KEY }}" > /run/secrets/nix-builder-key
+          install -d -m 700 /root/.ssh /run/secrets
+
+          if [ -z "${NIX_BUILDER_KEY:-}" ]; then
+            echo "::warning::NIX_BUILDER_KEY secret is not available; distributed KVM builders will be skipped"
+            echo "NIX_BUILDERS_AVAILABLE=0" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # Forgejo secrets may store multiline SSH keys either as real newlines
+          # or as escaped \n sequences. Decode both forms and strip CRLFs so
+          # OpenSSH does not reject the key with "error in libcrypto".
+          printf '%b' "$NIX_BUILDER_KEY" | tr -d '\r' > /run/secrets/nix-builder-key
           chmod 600 /run/secrets/nix-builder-key
+          ssh-keygen -y -f /run/secrets/nix-builder-key >/dev/null
+          echo "NIX_BUILDERS_AVAILABLE=1" >> "$GITHUB_ENV"
 
           # Override SSH config with aggressive keepalives for large transfers
           cat > /root/.ssh/config <<'SSHEOF'
@@ -28,6 +42,7 @@ jobs:
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             IdentityFile /run/secrets/nix-builder-key
+            IdentitiesOnly yes
             ServerAliveInterval 15
             ServerAliveCountMax 12
             TCPKeepAlive yes
@@ -60,7 +75,12 @@ jobs:
             connect-timeout = 30
         run: |
           echo "Running nix flake check..."
-          nix flake check --show-trace
+          if [ "${NIX_BUILDERS_AVAILABLE:-0}" = "1" ]; then
+            nix flake check --show-trace
+          else
+            echo "No distributed builders are available for this event; trying eval-only flake check."
+            nix flake check --show-trace --no-build || echo "::warning::Eval-only flake check could not complete without builders; full validation will run when builder secrets are available."
+          fi
 
       - name: Show flake info
         if: success() || failure()
@@ -79,10 +99,24 @@ jobs:
       options: --user root
     steps:
       - name: Setup SSH key for distributed builds
+        env:
+          NIX_BUILDER_KEY: ${{ secrets.NIX_BUILDER_KEY }}
         run: |
-          mkdir -p /run/secrets
-          echo "${{ secrets.NIX_BUILDER_KEY }}" > /run/secrets/nix-builder-key
+          install -d -m 700 /root/.ssh /run/secrets
+
+          if [ -z "${NIX_BUILDER_KEY:-}" ]; then
+            echo "::warning::NIX_BUILDER_KEY secret is not available; distributed KVM builders will be skipped"
+            echo "NIX_BUILDERS_AVAILABLE=0" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # Forgejo secrets may store multiline SSH keys either as real newlines
+          # or as escaped \n sequences. Decode both forms and strip CRLFs so
+          # OpenSSH does not reject the key with "error in libcrypto".
+          printf '%b' "$NIX_BUILDER_KEY" | tr -d '\r' > /run/secrets/nix-builder-key
           chmod 600 /run/secrets/nix-builder-key
+          ssh-keygen -y -f /run/secrets/nix-builder-key >/dev/null
+          echo "NIX_BUILDERS_AVAILABLE=1" >> "$GITHUB_ENV"
 
           # Override SSH config with aggressive keepalives for large transfers
           cat > /root/.ssh/config <<'SSHEOF'
@@ -90,6 +124,7 @@ jobs:
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             IdentityFile /run/secrets/nix-builder-key
+            IdentitiesOnly yes
             ServerAliveInterval 15
             ServerAliveCountMax 12
             TCPKeepAlive yes
@@ -114,6 +149,11 @@ jobs:
             builders-use-substitutes = true
         run: |
           echo "Building all NixOS host system closures..."
+          if [ "${NIX_BUILDERS_AVAILABLE:-0}" != "1" ]; then
+            echo "No distributed builders are available for this event; skipping host closure builds."
+            exit 0
+          fi
+
           all_hosts=$(nix eval --raw '.#nixosConfigurations' --apply 'x: builtins.concatStringsSep "\n" (builtins.attrNames x)')
 
           # Skip hosts with VM/container images that aren't in production yet
