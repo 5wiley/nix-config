@@ -201,6 +201,11 @@
         path="''${PWD//[^a-zA-Z0-9]/-}"
         echo "''${direnv_layout_dirs[$PWD]:=$XDG_CACHE_HOME/direnv/layouts/''${hash}''${path}}"
       }
+
+      ${builtins.readFile (pkgs.runCommandLocal "devenv-direnvrc" {} ''
+        ${devenvPackage}/bin/devenv direnvrc \
+          | sed 's/_nix_direnv_preflight/_devenv_preflight/g' > $out
+      '')}
     '';
   };
 
