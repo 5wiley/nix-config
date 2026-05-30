@@ -36,6 +36,11 @@ extra["port"] = int(env("HERMES_WEBHOOK_PORT", "8644"))
 # Hermes-side HMAC requirements.
 extra["secret"] = env("HERMES_WEBHOOK_SECRET", "INSECURE_NO_AUTH")
 
+platform_toolsets = data.setdefault("platform_toolsets", {})
+webhook_toolsets = platform_toolsets.setdefault("webhook", [])
+if "hermes-cli" not in webhook_toolsets:
+    webhook_toolsets.append("hermes-cli")
+
 fd, tmp = tempfile.mkstemp(prefix="config.", suffix=".yaml", dir=hermes_home)
 with os.fdopen(fd, "w", encoding="utf-8") as fh:
     yaml.safe_dump(data, fh, default_flow_style=False, sort_keys=False)
