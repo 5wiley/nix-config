@@ -276,8 +276,8 @@ in {
 
       proxyPath = mkOption {
         type = types.str;
-        default = "/webhooks/forgejo/issues/assigned-larry";
-        description = "HTTP path that Forgejo should POST issue and pull request webhooks to.";
+        default = "/webhooks/forgejo";
+        description = "HTTP path that Forgejo should POST issue, pull request, and Actions webhooks to.";
       };
 
       hermesHost = mkOption {
@@ -354,8 +354,9 @@ in {
 
       proxyPath = mkOption {
         type = types.str;
-        default = "/webhooks/forgejo/actions/failures";
-        description = "HTTP path that Forgejo should POST Actions webhooks to.";
+        default = forgejoWebhookCfg.proxyPath;
+        defaultText = literalExpression "config.services.clubcotton.hermes.forgejoIssueWebhook.proxyPath";
+        description = "HTTP path that Forgejo should POST Actions webhooks to. Defaults to the shared Forgejo webhook path.";
       };
 
       routeName = mkOption {
