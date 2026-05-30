@@ -281,6 +281,9 @@
     smfh
     statix
 
+    # Cloud
+    google-cloud-sdk
+
     # Playwright
     localPackages.playwright-cli
 
