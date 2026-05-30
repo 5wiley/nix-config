@@ -762,11 +762,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780099189,
-        "narHash": "sha256-sgOqrXZVcqscdak2R31N8uCBmPjocPuoTZy0fTUeI+g=",
+        "lastModified": 1780099755,
+        "narHash": "sha256-BCID+Nvf+AIHhsslryRj9LGiYZPrjXdg8xdMx69ZZ9E=",
         "ref": "refs/heads/main",
-        "rev": "ca6149745a013e740a59a8d2bbbe729e65e62f8d",
-        "revCount": 5,
+        "rev": "1acf24c73955460d4f4be3208289aacbde7d3d00",
+        "revCount": 6,
         "type": "git",
         "url": "https://forgejo.bobtail-clownfish.ts.net/bcotton/forgejo-webhook-proxy.git"
       },
