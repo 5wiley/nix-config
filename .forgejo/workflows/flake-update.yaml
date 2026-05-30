@@ -13,10 +13,22 @@ jobs:
       options: --user root
     steps:
       - name: Setup SSH key for distributed builds
+        env:
+          NIX_BUILDER_KEY: ${{ secrets.NIX_BUILDER_KEY }}
         run: |
-          mkdir -p /run/secrets
-          echo "${{ secrets.NIX_BUILDER_KEY }}" > /run/secrets/nix-builder-key
+          install -d -m 700 /root/.ssh /run/secrets
+
+          if [ -z "${NIX_BUILDER_KEY:-}" ]; then
+            echo "::warning::NIX_BUILDER_KEY secret is not available; distributed KVM builders will be skipped"
+            exit 0
+          fi
+
+          # Forgejo secrets may store multiline SSH keys either as real newlines
+          # or as escaped \n sequences. Decode both forms and strip CRLFs so
+          # OpenSSH does not reject the key with "error in libcrypto".
+          printf '%b' "$NIX_BUILDER_KEY" | tr -d '\r' > /run/secrets/nix-builder-key
           chmod 600 /run/secrets/nix-builder-key
+          ssh-keygen -y -f /run/secrets/nix-builder-key >/dev/null
 
           # Override SSH config with aggressive keepalives for large transfers
           cat > /root/.ssh/config <<'SSHEOF'
@@ -24,6 +36,7 @@ jobs:
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             IdentityFile /run/secrets/nix-builder-key
+            IdentitiesOnly yes
             ServerAliveInterval 15
             ServerAliveCountMax 12
             TCPKeepAlive yes
