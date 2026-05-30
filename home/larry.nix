@@ -5,12 +5,14 @@
   unstablePkgs,
   crushPackage,
   fjPackage,
+  gwsPackage,
   localPackages,
   inputs,
   ...
 }: {
   imports = [
     inputs.nix-openclaw.homeManagerModules.openclaw
+    inputs.nix-index-database.homeModules.default
   ];
 
   home.stateVersion = "24.05";
@@ -52,6 +54,9 @@
       gdc = "git diff --cached";
       gl = "git log --oneline -20";
       gco = "git checkout";
+
+      # Nix
+      nix-options = "xdg-open https://search.nixos.org/options";
 
       # Navigation
       ".." = "cd ..";
@@ -191,6 +196,15 @@
     enableZshIntegration = true;
   };
 
+  # Nix workflow tools from
+  # https://iampavel.dev/blog/best-nixos-tools
+  # nix-index-database supplies a prebuilt index for nix-locate and comma.
+  programs.nix-index-database.comma.enable = true;
+  programs.nix-index = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
   programs.direnv = {
     enable = true;
     enableZshIntegration = true;
@@ -245,6 +259,8 @@
     # Forgejo/Git workflow
     tea # Gitea/Forgejo CLI
     fjPackage # Forgejo CLI (gh clone)
+    gwsPackage # git workspace manager
+    bws # Bitwarden Secrets Manager CLI
 
     # Development
     tldr # simplified man pages
@@ -259,6 +275,11 @@
     # Nix tools
     nil # nix LSP
     alejandra # nix formatter
+    nh
+    nix-init
+    nurl
+    smfh
+    statix
 
     # Playwright
     localPackages.playwright-cli

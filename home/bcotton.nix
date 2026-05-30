@@ -736,6 +736,7 @@
       worktrunkPackage
       gwsPackage
       fjPackage
+      bws
     ]
     ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       qmdPackage
