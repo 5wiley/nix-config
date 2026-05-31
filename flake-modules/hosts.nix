@@ -27,6 +27,13 @@
             lib = nixpkgs-unstable.lib;
             unstablePkgs = null;
           })
+          # mise pinned to 2026.5.18 (nixpkgs-unstable at 2026.5.12 as of 2026-05-20)
+          ((import ../overlays/mise.nix) {
+            config = {};
+            pkgs = null;
+            lib = nixpkgs-unstable.lib;
+            unstablePkgs = null;
+          })
         ];
       };
 

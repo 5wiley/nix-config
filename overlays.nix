@@ -49,6 +49,8 @@
         # Core tools that should always be available
         ((import ./overlays/qmk.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/claude-code.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        # mise pinned to 2026.5.18 (nixpkgs at 2026.5.12 as of 2026-05-20)
+        ((import ./overlays/mise.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/psycopg.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/llm.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         # tmux pinned to master for copy-mode crash fix (issue #4777)
