@@ -1,0 +1,30 @@
+diff --git a/beets/importer.py b/beets/importer.py
+index 1e9ff7e..bb60d68 100644
+--- a/beets/importer.py
++++ b/beets/importer.py
+@@ -1272 +1272,24 @@ class ArchiveImportTask(SentinelImportTask):
+-                cls._handlers.append((is_7zfile, SevenZipFile))
++
++                class SevenZipInfo:
++                    def __init__(self, member):
++                        self.filename = member.filename
++                        self.date_time = member.creationtime.timetuple()[:6]
++
++                class SevenZipWrapper:
++                    def __init__(self, *args, **kwargs):
++                        self._archive = SevenZipFile(*args, **kwargs)
++
++                    def extractall(self, path):
++                        return self._archive.extractall(path=path)
++
++                    def infolist(self):
++                        return [
++                            SevenZipInfo(member)
++                            for member in self._archive.list()
++                            if member.is_file
++                        ]
++
++                    def close(self):
++                        return self._archive.close()
++
++                cls._handlers.append((is_7zfile, SevenZipWrapper))
