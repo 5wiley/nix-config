@@ -28,7 +28,7 @@ with lib; let
   webhookEnabled = forgejoWebhookCfg.enable || forgejoCiWebhookCfg.enable || alertmanagerWebhookCfg.enable;
 
   webhookPrompt = ''
-    Forgejo issue or pull request mention webhook received.
+    Forgejo issue or pull request webhook received for larry.
 
     Repository: {repository.full_name}
     Action: {action}
@@ -38,27 +38,34 @@ with lib; let
     Pull request URL: {pull_request.html_url}
     Comment URL: {comment.html_url}
     Comment body: {comment.body}
-    Mentioned user: {hermes_forgejo_proxy.matched_user}
+    Matched user: {hermes_forgejo_proxy.matched_user}
+    Trigger: {hermes_forgejo_proxy.trigger}
     Eyes reaction added by proxy: {hermes_forgejo_proxy.reaction_added}
 
     This webhook has already been validated and filtered by the local nix-config
-    Forgejo-to-Hermes proxy. The issue or pull request comment mentions larry.
+    Forgejo-to-Hermes proxy. It fired because larry was assigned to the issue/PR
+    or because an issue/PR/comment mentioned @larry.
 
     Triage and implement the request:
     1. Fetch the full issue or pull request details from Forgejo.
     2. Clone or update the repository checkout for {repository.full_name}.
     3. Create an implementation branch named for the issue, PR, or comment context.
-    4. Determine what the mention asks larry to do, then make the requested change.
+    4. Determine what larry is being asked to do; for assignment events, infer the
+       requested work from the issue/PR body and discussion.
     5. Run the relevant formatter, tests, and/or NixOS build checks.
     6. Commit and push the branch.
     7. Open a Forgejo pull request or update an existing one.
     8. Report the PR URL and verification results.
 
+    If you cannot complete the workflow or any webhook processing step fails,
+    immediately notify larry through the Telegram home channel with a concise
+    failure summary, the issue/PR URL, and what manual action is needed.
+
     Use Forgejo via fj. Do not print tokens or secrets.
   '';
 
   forgejoWebhookRoute = {
-    description = "Implement Forgejo issues or pull requests that mention larry";
+    description = "Implement Forgejo issues or pull requests assigned to or mentioning larry";
     secret = "INSECURE_NO_AUTH";
     prompt = webhookPrompt;
     skills = ["forgejo-fj" "github-pr-workflow"];
