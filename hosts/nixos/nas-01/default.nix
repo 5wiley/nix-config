@@ -146,6 +146,7 @@ in {
     immich.enable = true;
     jellyfin.enable = true;
     jellyseerr.enable = true;
+    karakeep.enable = true;
     mimir.enable = true;
     kavita.enable = false;
     loki.enable = true;

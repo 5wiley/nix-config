@@ -26,6 +26,7 @@
     ./immich
     ./incus-vm
     ./jellyfin
+    ./karakeep
     ./kavita
     ./llama-swap
     ./loki
