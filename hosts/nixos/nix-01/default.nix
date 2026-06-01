@@ -301,7 +301,11 @@ in {
       User = "bcotton";
       Group = "users";
       WorkingDirectory = "/home/bcotton/nix-config/default";
-      TimeoutStartSec = "30min";
+      # The report publishes a daily issue, then may continue with issue
+      # investigation and PR drafting. The 2026-06-01 run published its
+      # report but was killed at the previous 30 minute timeout while still
+      # doing follow-up work, leaving the oneshot unit failed.
+      TimeoutStartSec = "2h";
       EnvironmentFile = "/home/bcotton/.config/sensitive/.claude-personal-env";
       Environment = [
         "HOME=/home/bcotton"
