@@ -508,7 +508,7 @@ in {
           ttl = 1800;
         };
         "gemma-4-31b-it-f16" = {
-          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-31B-it-f16.gguf --ctx-size 16384 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-31B-it-f16.gguf --mmproj /models/mmproj-gemma-4-31B-it-bf16.gguf --ctx-size 16384 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
           ttl = 1800;
         };
         "gemma-4-26b-a4b-it-bf16" = {
@@ -597,6 +597,20 @@ in {
 
   services.clubcotton.wallabag = {
     dataDir = "/media/documents/wallabag";
+  };
+
+  services.clubcotton.karakeep = {
+    # Route AI inference through the local llama-swap endpoint.
+    # OPENAI_API_KEY is required but unused by llama-swap.
+    extraEnvironment = {
+      OPENAI_BASE_URL = "http://nas-01:8090/v1";
+      OPENAI_API_KEY = "not-needed";
+      INFERENCE_TEXT_MODEL = "qwen3.6-35b-a3b-q6_k-coding";
+      INFERENCE_CONTEXT_LENGTH = "16384";
+      INFERENCE_JOB_TIMEOUT_SEC = "180";
+      EMBEDDING_TEXT_MODEL = "gte-qwen2-1.5b-instruct";
+      INFERENCE_IMAGE_MODEL = "gemma-4-31b-it-f16";
+    };
   };
 
   services.clubcotton.kavita = {
