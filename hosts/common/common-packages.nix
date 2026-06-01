@@ -8,11 +8,6 @@
   config = {
     nixpkgs.config.permittedInsecurePackages = [
       "python3.12-ecdsa-0.19.1"
-      # beets 2.5.1 marked insecure upstream (CVE-2026-42052, XSS).
-      # We use a custom fork (overlays/beets.nix → bcotton/beets@aa265b4f) which inherits
-      # the base version. This unblocks CI; revisit when upstream bumps beets or our fork
-      # is confirmed to address the XSS issue. See #384.
-      "python3.13-beets-2.5.1"
     ];
 
     # let home-manager override files, but back them up first
