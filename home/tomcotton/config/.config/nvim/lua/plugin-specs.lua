@@ -23,36 +23,36 @@ local plugin_specs = {
   -- },
 
   -- LSPs https://www.jakmaz.com/blog/nvim-lsp
-  -- { -- Mason: installs and manages external tools like LSP servers
-  --   'mason-org/mason.nvim',
-  --   opts = {},
-  -- },
-  -- { -- Mason-LSPConfig: tells Mason which servers to install and links them to lspconfig
-  --   "mason-org/mason-lspconfig.nvim",
-  --   opts = {
-  --     ensure_installed = {
-  --       "lua_ls",
-  --       "pyright",
-  --       "ts_ls",
-  --       "rust_analyzer",
-  --       "clangd"
-  --     },
-  --   },
-  -- },
+  { -- Mason: installs and manages external tools like LSP servers
+    'mason-org/mason.nvim',
+    opts = {},
+  },
+  { -- Mason-LSPConfig: tells Mason which servers to install and links them to lspconfig
+    "mason-org/mason-lspconfig.nvim",
+    opts = {
+      ensure_installed = {
+        "lua_ls",
+        "pyright",
+        "ts_ls",
+        "rust_analyzer",
+        "clangd"
+      },
+    },
+  },
   -- { -- nvim-lspconfig: connects Neovim to installed LSP servers
   --   "neovim/nvim-lspconfig",
   --   config = function()
   --     require("lspconfig") -- sets up lspconfigs
   --   end
   -- },
-  -- {
-  --   "nvim-treesitter/nvim-treesitter",
-  --   lazy = true,
-  --   build = ":TSUpdate",
-  --   config = function()
-  --     require("config.treesitter")
-  --   end,
-  -- },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    lazy = true,
+    build = ":TSUpdate",
+    config = function()
+      require("config.treesitter")
+    end,
+  },
 
   -- {
   --   "nvim-treesitter/nvim-treesitter-textobjects",
