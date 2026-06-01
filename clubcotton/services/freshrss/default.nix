@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  unstablePkgs,
   ...
 }:
 with lib; let
@@ -67,6 +68,7 @@ in {
   config = mkIf cfg.enable {
     services.freshrss = {
       enable = cfg.enable;
+      package = unstablePkgs.freshrss;
       passwordFile = cfg.passwordFile;
       baseUrl = "https://freshrss.bobtail-clownfish.ts.net";
       virtualHost = "freshrss";
