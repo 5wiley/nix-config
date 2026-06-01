@@ -1,5 +1,8 @@
-{ freshrss, fetchFromGitHub, lib }:
-
+{
+  freshrss,
+  fetchFromGitHub,
+  lib,
+}:
 freshrss.unwrapped.buildFreshRssExtension rec {
   FreshRssExtUniqueId = "YouLag";
   pname = "youlag";
@@ -14,6 +17,6 @@ freshrss.unwrapped.buildFreshRssExtension rec {
     description = "FreshRSS extension to embed content from sites like YouTube, PeerTube, etc.";
     homepage = "https://github.com/civilblur/youlag";
     license = lib.licenses.agpl3Only;
-    maintainers = [ lib.maintainers.stunkymonkey ];
+    maintainers = [lib.maintainers.stunkymonkey];
   };
 }

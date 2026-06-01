@@ -20,7 +20,7 @@
         pg-scram-hash = pkgs.callPackage ../pkgs/pg-scram-hash {};
         # hermes-webhook-tools: Configure Hermes webhook routes and proxy Forgejo webhooks
         hermes-webhook-tools = pkgs.callPackage ../pkgs/hermes-webhook-tools {};
-        freshrss-youlag = pkgs.callPackage ../pkgs/freshrss-youlag { freshrss = pkgs.freshrss; };
+        freshrss-youlag = pkgs.callPackage ../pkgs/freshrss-youlag {freshrss = pkgs.freshrss;};
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
