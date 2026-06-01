@@ -1,0 +1,77 @@
+groups:
+  - name: llama_swap_metrics
+    interval: 1m
+    rules:
+      - record: llama:kv_cache_used_mib
+        expr: |
+          avg_over_time({unit="llama-swap.service"} |= "cache state:" | regexp "cache state: \\d+ prompts, (?P<used_mib>[\\d.]+) MiB" | unwrap used_mib [1m])
+
+      - record: llama:kv_cache_prompts
+        expr: |
+          avg_over_time({unit="llama-swap.service"} |= "cache state:" | regexp "cache state: (?P<prompts>\\d+) prompts" | unwrap prompts [1m])
+
+      - record: llama:prompt_tokens
+        expr: |
+          avg_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | unwrap n_tokens [1m])
+
+      - record: llama:kv_cache_errors:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "failed to find free space" [5m])
+
+      - record: llama:context_exceeded_errors:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "exceeds the available context" [5m])
+
+      - record: llama:model_exits:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "ExitError" [5m])
+
+      - record: llama:model_unloads:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "Unloading model" [5m])
+
+      - record: llama:prompt_batch_tokens
+        expr: |
+          avg_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | unwrap batch_tokens [1m])
+
+      - record: llama:prompt_cache_hits:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | batch_tokens < 512 [5m])
+
+      - record: llama:prompt_full_evals:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "prompt processing done" | regexp "batch\\.n_tokens = (?P<batch_tokens>\\d+)" | batch_tokens >= 512 [5m])
+
+      - record: llama:model_unloads_by_model:rate5m
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "Unloading model" | regexp "<(?P<model>[^>]+)> Unloading model" [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "8192"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 8192 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "32768"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 32768 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "65536"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 65536 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "131072"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" | n_tokens <= 131072 [5m])
+
+      - record: llama:prompt_tokens_bucket
+        labels:
+          le: "+Inf"
+        expr: |
+          count_over_time({unit="llama-swap.service"} |= "new prompt" | regexp "task\\.n_tokens = (?P<n_tokens>\\d+)" [5m])

@@ -60,16 +60,6 @@ in {
       })
     ];
 
-    environment.variables = {
-      NEOReadDebugKeys = "1";
-      OverrideGpuAddressSpace = "48";
-    };
-
-    systemd.services."jellyfin".environment = {
-      NEOReadDebugKeys = "1";
-      OverrideGpuAddressSpace = "48";
-    };
-
     services.${service} = {
       enable = true;
       openFirewall = true;

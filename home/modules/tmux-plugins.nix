@@ -82,37 +82,61 @@
       };
     };
 
-  # tmux-powerkit requires runtime dependencies (uname, grep, awk, etc.)
-  # We wrap all shell scripts with the necessary PATH
-  tmux-powerkit = let
-    unwrapped = pkgs.tmuxPlugins.mkTmuxPlugin {
-      pluginName = "tmux-powerkit";
-      version = "head";
-      src = pkgs.fetchFromGitHub {
-        owner = "fabioluciano";
-        repo = "tmux-powerkit";
-        rev = "9d5bfdaabf2a03e05d8ae11f1065f694d15df0d5";
-        sha256 = "sha256-QhCUQDmt+Ur6KakrycJ4uvnIZzTHGkG/f01vslFxR5w=";
-      };
-    };
-    runtimeDeps = with pkgs; [coreutils gnugrep gawk gnused findutils];
-    runtimePath = lib.makeBinPath runtimeDeps;
-    wrapped = pkgs.runCommand "tmux-powerkit-wrapped" {} ''
-      cp -r ${unwrapped} $out
-      chmod -R +w $out
+  # Wrap tmux-resurrect to add a custom save command strategy that reads
+  # the actual typed command from a tmux pane user option (@user-command),
+  # set by a zsh preexec hook. Falls back to the default ps-based strategy.
+  tmux-resurrect = let
+    unwrapped = pkgs.tmuxPlugins.resurrect;
+    wrapped = pkgs.runCommand "tmux-resurrect-wrapped" {} ''
+            cp -r ${unwrapped} $out
+            chmod -R +w $out
 
-      # Add PATH to all shell scripts
-      for f in $(find $out -name "*.sh" -o -name "*.tmux"); do
-        if [[ -f "$f" ]] && head -1 "$f" | grep -q "^#!.*bash"; then
-          sed -i '2i export PATH="${runtimePath}:$PATH"' "$f"
+            cat > $out/share/tmux-plugins/resurrect/save_command_strategies/pane_user_option.sh << 'STRATEGY'
+      #!/usr/bin/env bash
+
+      PANE_PID="$1"
+
+      exit_safely_if_empty_ppid() {
+        if [ -z "$PANE_PID" ]; then
+          exit 0
         fi
-      done
+      }
+
+      full_command_from_pane_option() {
+        # Find the pane_id (%N) for this PID
+        local pane_id
+        pane_id=$(tmux list-panes -a -F '#{pane_pid} #{pane_id}' | grep "^''${PANE_PID} " | head -1 | cut -d' ' -f2)
+        if [ -n "$pane_id" ]; then
+          local cmd
+          cmd=$(tmux display-message -p -t "$pane_id" '#{@user-command}' 2>/dev/null)
+          if [ -n "$cmd" ]; then
+            echo "$cmd"
+            return 0
+          fi
+        fi
+        return 1
+      }
+
+      full_command_from_ps() {
+        ps -ao "ppid,args" |
+          sed "s/^ *//" |
+          grep "^''${PANE_PID}" |
+          cut -d' ' -f2-
+      }
+
+      main() {
+        exit_safely_if_empty_ppid
+        full_command_from_pane_option || full_command_from_ps
+      }
+      main
+      STRATEGY
+            chmod +x $out/share/tmux-plugins/resurrect/save_command_strategies/pane_user_option.sh
     '';
   in
     wrapped
     // {
       inherit (unwrapped) pname version meta;
-      rtp = "${wrapped}/share/tmux-plugins/tmux-powerkit/tmux-powerkit.tmux";
+      rtp = "${wrapped}/share/tmux-plugins/resurrect/resurrect.tmux";
       passthru = unwrapped.passthru or {};
     };
 
@@ -131,7 +155,7 @@ in {
 
   config = lib.mkIf cfg.enable {
     _module.args = {
-      inherit tmux-window-name tmux-fzf-head tmux-nested tmux-fuzzback tmux-powerkit;
+      inherit tmux-window-name tmux-fzf-head tmux-nested tmux-fuzzback;
     };
 
     programs.tmux = {
@@ -143,7 +167,7 @@ in {
       historyLimit = 20000;
       baseIndex = 1;
       aggressiveResize = true;
-      # escapeTime = 0;
+      escapeTime = 0;
       terminal = "screen-256color";
 
       plugins = with pkgs.tmuxPlugins; [
@@ -163,12 +187,16 @@ in {
             ''}
           '';
         }
+        {
+          plugin = tmux-resurrect;
+          extraConfig = ''
+            set -g @resurrect-save-command-strategy 'pane_user_option'
+            set -g @resurrect-processes '"~claudep->claudep" "~claude->claude"'
+          '';
+        }
         extrakto
         {
           plugin = tmux-window-name;
-        }
-        {
-          plugin = tmux-powerkit;
         }
       ];
       extraConfig = lib.mkAfter ''
@@ -276,18 +304,13 @@ in {
         set -g @nested_inactive_status_style '#[fg=black,bg=red] #h #[bg=colour237,fg=colour241,nobold,noitalics,nounderscore]'
         set -g @nested_inactive_status_style_target 'status-left'
 
-        # tmux-powerkit configuration
-        set -g @powerkit_theme 'tokyo-night'
-        set -g @powerkit_theme_variant 'night'
-        set -g @powerkit_plugins 'datetime,battery,cpu,memory,git'
-        set -g @powerkit_session_icon 'auto'
-        set -g @powerkit_transparent 'true'
-        set -g @powerkit_options_key 'P'
-
         bind-key "C-f" run-shell -b "${tmux-fzf-head}/share/tmux-plugins/tmux-fzf/scripts/session.sh switch"
         run-shell ${tmux-nested}/share/tmux-plugins/tmux-nested/nested.tmux
         run-shell ${tmux-fuzzback}/share/tmux-plugins/tmux-fuzzback/fuzzback.tmux
-        run-shell ${tmux-powerkit}/share/tmux-plugins/tmux-powerkit/tmux-powerkit.tmux
+
+        set -g @continuum-restore 'on'
+        set -g @continuum-save-interval '15'
+        run-shell ${pkgs.tmuxPlugins.continuum}/share/tmux-plugins/continuum/continuum.tmux
 
         # tmux-file-picker keybindings
         bind C-f display-popup -E "${tmux-file-picker-src}/tmux-file-picker"
@@ -308,6 +331,16 @@ in {
       if [[ -n "$TMUX" ]]; then
         add-zsh-hook chpwd tmux-window-name
       fi
+
+      # Track the actual typed command in a tmux pane user option so that
+      # tmux-resurrect can save/restore it (instead of relying on ps output,
+      # which can't distinguish shell functions like claude vs claudep).
+      _tmux_resurrect_track_command() {
+        if [[ -n "$TMUX" ]]; then
+          tmux set-option -p @user-command "$1" 2>/dev/null
+        fi
+      }
+      add-zsh-hook preexec _tmux_resurrect_track_command
     '';
   };
 }

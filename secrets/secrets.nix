@@ -49,6 +49,8 @@ in {
   # "garage-metrics-token.age".publicKeys = users ++ systems;
   "grafana-cloud.age".publicKeys = users ++ systems;
   "harmonia-signing-key.age".publicKeys = users ++ systems;
+  "honcho-database.age".publicKeys = users ++ systems;
+  "honcho-database-raw.age".publicKeys = users ++ systems;
   "homeassistant-token.age".publicKeys = users ++ systems;
   "immich-database.age".publicKeys = users ++ systems;
   "immich.age".publicKeys = users ++ systems;
@@ -67,8 +69,11 @@ in {
   "paperless.age".publicKeys = users ++ systems;
   "paperless-database.age".publicKeys = users ++ systems;
   "paperless-database-raw.age".publicKeys = users ++ systems;
+  "prometheus-incus-cert.age".publicKeys = users ++ systems;
+  "prometheus-incus-key.age".publicKeys = users ++ systems;
   "pushover-key.age".publicKeys = users ++ systems;
   "pushover-token.age".publicKeys = users ++ systems;
+  "redis-password.age".publicKeys = users ++ systems;
   "scanner-user-private-ssh-key.age".publicKeys = users ++ systems;
   "syncoid-ssh-key.age".publicKeys = users ++ systems;
   "tailscale-keys.env".publicKeys = users ++ systems;
@@ -91,10 +96,21 @@ in {
   "forgejo-token-larry.age".publicKeys = just_larry ++ botSystems;
   "moltbot-telegram-token.age".publicKeys = just_larry ++ botSystems;
   "moltbot-gateway-token.age".publicKeys = just_larry ++ botSystems;
+  "freshrss-env-larry.age".publicKeys = just_larry ++ botSystems;
 
   # Mimir S3 credentials (for Garage backend)
   "mimir-s3.age".publicKeys = users ++ systems;
 
   # Loki S3 credentials (for Garage backend)
   "loki-s3.age".publicKeys = users ++ systems;
+
+  # Tempo S3 credentials (for Garage backend)
+  "tempo-s3.age".publicKeys = users ++ systems;
+
+  # Smoke test credentials for Playwright CI tests
+  "smoke-test-creds.age".publicKeys = users ++ systems;
+
+  # Forgejo API token for auto-upgrade workflow dispatch
+  "forgejo-dispatch-token.age".publicKeys = users ++ systems;
+  "forgejo-hermes-webhook-secret.age".publicKeys = just_larry ++ botSystems;
 }

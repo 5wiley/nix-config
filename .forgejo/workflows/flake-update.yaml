@@ -1,0 +1,147 @@
+name: Flake Update
+
+on:
+  schedule:
+    - cron: '30 2 * * *'  # 02:30 UTC daily (8:30pm MDT) — 6h before earliest auto-upgrade
+  workflow_dispatch:
+
+jobs:
+  update-flake:
+    runs-on: ubuntu-latest
+    container:
+      image: forgejo.bobtail-clownfish.ts.net/bcotton/nix-ci-runner:a0ddfa0
+      options: --user root
+    steps:
+      - name: Setup SSH key for distributed builds
+        env:
+          NIX_BUILDER_KEY: ${{ secrets.NIX_BUILDER_KEY }}
+        run: |
+          install -d -m 700 /root/.ssh /run/secrets
+
+          if [ -z "${NIX_BUILDER_KEY:-}" ]; then
+            echo "::warning::NIX_BUILDER_KEY secret is not available; distributed KVM builders will be skipped"
+            exit 0
+          fi
+
+          # Forgejo secrets may store multiline SSH keys either as real newlines
+          # or as escaped \n sequences. Decode both forms and strip CRLFs so
+          # OpenSSH does not reject the key with "error in libcrypto".
+          printf '%b' "$NIX_BUILDER_KEY" | tr -d '\r' > /run/secrets/nix-builder-key
+          chmod 600 /run/secrets/nix-builder-key
+          ssh-keygen -y -f /run/secrets/nix-builder-key >/dev/null
+
+          # Override SSH config with aggressive keepalives for large transfers
+          cat > /root/.ssh/config <<'SSHEOF'
+          Host nas-01.lan nix-01.lan nix-02.lan nix-03.lan
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IdentityFile /run/secrets/nix-builder-key
+            IdentitiesOnly yes
+            ServerAliveInterval 15
+            ServerAliveCountMax 12
+            TCPKeepAlive yes
+            IPQoS throughput
+          SSHEOF
+
+      - name: Setup git
+        run: |
+          git config --global user.email "actions@forgejo.local"
+          git config --global user.name "Forgejo Actions"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FLAKE_UPDATE_TOKEN }}
+          fetch-depth: 0
+
+      - name: Clean up old flake-update branches
+        run: |
+          git fetch origin
+          for branch in $(git branch -r --list 'origin/flake-update/*'); do
+            branch_name="${branch#origin/}"
+            echo "Deleting old branch: $branch_name"
+            git push origin --delete "$branch_name" || true
+          done
+
+      - name: Run nix flake update
+        env:
+          NIX_CONFIG: |
+            stalled-download-timeout = 3600
+            connect-timeout = 30
+        run: nix flake update
+
+      - name: Fix volatile hashes
+        run: |
+          echo "Checking for stale fixed-output derivation hashes..."
+          bash scripts/fix-hashes.sh
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create branch and push
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          BRANCH="flake-update/$(date -u +%Y-%m-%d-%H%M%S)"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+          git checkout -b "$BRANCH"
+          git add flake.lock
+          git add -u  # pick up any hash-fixed files
+          git commit -m "flake.lock: update $(date -u +%Y-%m-%d)"
+          git push origin "$BRANCH"
+
+      - name: Create PR and enable auto-merge
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          nix shell nixpkgs#curl nixpkgs#jq --command bash -c '
+            set -euo pipefail
+
+            API_URL="${GITHUB_SERVER_URL}/api/v1"
+            REPO="${GITHUB_REPOSITORY}"
+            TOKEN="${{ secrets.FLAKE_UPDATE_TOKEN }}"
+            DATE="$(date -u +%Y-%m-%d)"
+
+            # Create PR
+            PR_RESPONSE=$(curl -sf -X POST \
+              -H "Authorization: token ${TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"title\": \"flake.lock: update ${DATE}\",
+                \"body\": \"Automated daily flake input update.\",
+                \"head\": \"${BRANCH}\",
+                \"base\": \"main\"
+              }" \
+              "${API_URL}/repos/${REPO}/pulls")
+
+            PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r ".number")
+
+            if [ "$PR_NUMBER" = "null" ] || [ -z "$PR_NUMBER" ]; then
+              echo "Failed to create PR:"
+              echo "$PR_RESPONSE" | jq .
+              exit 1
+            fi
+
+            echo "Created PR #${PR_NUMBER}"
+
+            # Enable auto-merge (merge when CI passes)
+            curl -sf -X POST \
+              -H "Authorization: token ${TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"merge_message_field\": \"Auto-merge: flake.lock update ${DATE}\",
+                \"merge_when_checks_succeed\": true,
+                \"delete_branch_after_merge\": true,
+                \"Do\": \"merge\"
+              }" \
+              "${API_URL}/repos/${REPO}/pulls/${PR_NUMBER}/merge"
+
+            echo "Auto-merge enabled for PR #${PR_NUMBER}"
+          '

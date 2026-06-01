@@ -3,6 +3,10 @@ default: switch
 
 hostname := `hostname | cut -d "." -f 1`
 
+# Show all available commands
+help:
+  @just --list
+
 # Install git hooks (idempotent)
 install-hooks:
     #!/usr/bin/env bash
@@ -47,6 +51,17 @@ trace target_host=hostname: (build target_host "--show-trace")
 switch target_host=hostname:
   sudo nixos-rebuild switch --flake .#{{target_host}}
 
+# Build and dry-activate to show what would change without switching
+[linux]
+dry-activate target_host=hostname:
+  sudo nixos-rebuild dry-activate --flake .#{{target_host}}
+
+# Dry-activate on a remote host to preview changes without switching
+# Usage: just dry-activate-remote nas-01
+dry-activate-remote target_host:
+  NIX_SSHOPTS="-A" nixos-rebuild dry-activate --flake .#{{target_host}} \
+    --target-host root@{{target_host}}
+
 # Safely switch network configuration with automatic rollback
 # This should be run ON the target host, not remotely
 [linux]
@@ -64,18 +79,37 @@ fmt: install-hooks
   nix fmt .
 
 # Deploy to one or more remote NixOS hosts via SSH
+# Runs dry-activate first and aborts if any ZFS datasets would be destroyed
 # Usage: just deploy nas-01
 #        just deploy nas-01 nix-01 nix-02
 # Builds use distributed builders configured in the local host's nix-builder.coordinator
 deploy +hostnames:
   #!/usr/bin/env bash
   set -euo pipefail
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "ERROR: 'just deploy' cannot be run from a darwin host."
+    echo "nixos-rebuild is not available on macOS. Run this from a NixOS host (e.g., admin) instead."
+    exit 1
+  fi
   for hostname in {{hostnames}}; do
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "Dry-activating $hostname..."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    output=$(NIX_SSHOPTS="-A" nixos-rebuild dry-activate --flake ".#$hostname" \
+      --target-host "root@$hostname" 2>&1)
+    echo "$output"
+    if echo "$output" | grep -q "zfs destroy"; then
+      echo ""
+      echo "ABORTING: dry-activate for $hostname would destroy ZFS datasets!"
+      echo "Review the destructive commands above and fix disko.zfs config before deploying."
+      exit 1
+    fi
+    echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "Deploying $hostname..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    NIX_SSHOPTS="-A" nixos-rebuild switch --flake .#$hostname \
-      --target-host root@$hostname || echo "⚠ Failed to deploy $hostname"
+    NIX_SSHOPTS="-A" nixos-rebuild switch --flake ".#$hostname" \
+      --target-host "root@$hostname" || echo "⚠ Failed to deploy $hostname"
   done
   echo ""
   echo "✓ Deployment complete"
@@ -105,6 +139,7 @@ repl:
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc generations="5d":
   nix-env --delete-generations {{generations}}
+  nix-env --delete-generations +3 --profile ~/.local/state/nix/profiles/home-manager
   nix-store --gc
 
 # Run nix flake check to validate all configurations
@@ -133,10 +168,69 @@ nas-01-console:
 # List recent Forgejo CI runs
 # Usage: just ci              (list recent runs)
 #        just ci -s failure   (show only failures)
-#        just ci show 401     (show run details)
-#        just ci logs 401     (show run logs)
+#        just ci 401          (show run details)
+#        just ci-logs 401     (show run logs)
+#        just ci-logs 401 1   (show logs for job index 1)
 ci *args="":
-  ./scripts/forgejo-runs.sh {{args}}
+  fj run list {{args}}
+
+# Show logs for a CI run, optionally filtered to a specific job
+ci-logs run_number job="":
+  #!/usr/bin/env bash
+  if [[ -n "{{job}}" ]]; then
+    fj run logs {{run_number}} -j "{{job}}"
+  else
+    fj run logs {{run_number}}
+  fi
+
+# Look up hosts by IP, hostname, or partial match
+host-lookup *args="":
+  ./scripts/host-lookup.sh {{args}}
+
+# Analyze a failed CI run
+ci-analyze *args="":
+  ./scripts/ci-analyze.sh {{args}}
+
+# Check if a Forgejo issue appears to be fixed
+issue-check-fixed *args="":
+  ./scripts/issue-check-fixed.sh {{args}}
+
+# Query Loki logs from the command line
+loki-query *args="":
+  ./scripts/loki-query.sh {{args}}
+
+# Run infrastructure report queries and output JSON
+infra-report-data *args="":
+  ./scripts/infra-report.sh {{args}}
+
+# Analyze llama-swap model performance from Loki logs
+llama-perf *args="":
+  ./scripts/llama-perf.sh {{args}}
+
+# Download a GGUF model from Hugging Face to nas-01
+# Usage: just download-model bartowski/Meta-Llama-3.1-8B-Instruct-GGUF Q4_K_M
+#        just download-model bartowski/Qwen2.5-72B-Instruct-GGUF Q4_K_M --dry-run
+download-model *args="":
+  ./scripts/download-model.sh {{args}}
+
+# Build an Incus VM image (qcow2 + metadata) for importing into Incus
+build-incus-image host="incus-testing":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  echo "Building {{host}} qcow2 image..."
+  nix build '.#nixosConfigurations.{{host}}.config.system.build.qemuImage' -o result-qemu-image
+  echo "Building {{host}} metadata..."
+  nix build '.#nixosConfigurations.{{host}}.config.system.build.metadata' -o result-metadata
+  echo ""
+  echo "Image artifacts:"
+  ls -lh result-qemu-image/nixos.qcow2
+  ls -lh result-metadata/tarball/
+  echo ""
+  echo "To import into Incus:"
+  echo "  incus image import result-metadata/tarball/*.tar.xz result-qemu-image/nixos.qcow2 --alias nixos-{{host}}"
+  echo ""
+  echo "To launch:"
+  echo "  incus launch nixos-{{host}} {{host}} --vm -c security.secureboot=false -c security.nesting=true -c limits.cpu=4 -c limits.memory=8GiB -d root,size=50GiB"
 
 w-dconfdump:
   dconf dump / > tmp/w-dconf

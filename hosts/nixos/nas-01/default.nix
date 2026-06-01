@@ -8,11 +8,10 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
+  nixosHostSpecs,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -22,6 +21,9 @@ in {
     inputs.nix-builder-config.nixosModules.coordinator
     ../../../modules/samba
     ../../../modules/prometheus/nix-build-cache-check.nix
+    ../../../modules/amdgpu
+    ../../../modules/incus
+    ../../../modules/loki-host-monitor
     ../../../modules/systemd-network
     ../../../users/cheryl.nix
     ./restic.nix
@@ -34,18 +36,117 @@ in {
   disabledModules = ["services/printing/cups-pdf.nix"];
 
   services.clubcotton = {
-    alloy-logs.enable = true;
+    alloy-logs = {
+      enable = true;
+      otelReceiver.enable = true;
+    };
     atuin.enable = true;
-    calibre.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "04:00";
+      timeoutSec = "120min"; # nas-01 builds many packages from source (open-webui, claude-code, beads, paperless-ngx)
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled" "postgresql" "forgejo"];
+        tcpPorts = [
+          {port = 22;}
+          {port = 3000;}
+        ];
+        extraScriptPackages = [pkgs.jq];
+      };
+      onSuccess = let
+        curl = "${pkgs.curl}/bin/curl";
+        jq = "${pkgs.jq}/bin/jq";
+        forgejoUrl = "https://forgejo.bobtail-clownfish.ts.net";
+        repo = "bcotton/nix-config";
+        workflow = "playwright.yaml";
+        tokenPath = config.age.secrets."forgejo-dispatch-token".path;
+        pollInterval = 15;
+        maxWait = 600; # 10 minutes
+        appearTimeout = 60; # 1 minute for run to appear
+      in ''
+        # Trigger Playwright smoke tests and wait for result (failures are non-fatal)
+        (
+          TOKEN=$(cat ${tokenPath})
+          API="${forgejoUrl}/api/v1/repos/${repo}"
+          AUTH="Authorization: token $TOKEN"
+
+          echo "=== Post-upgrade: triggering Playwright smoke tests ==="
+
+          # Get current latest run number
+          LATEST=$(${curl} -sf -H "$AUTH" "$API/actions/tasks?limit=5" \
+            | ${jq} '[.workflow_runs[].run_number] | max // 0')
+
+          # Dispatch the workflow
+          HTTP_CODE=$(${curl} -sf -o /dev/null -w '%{http_code}' -X POST \
+            "$API/actions/workflows/${workflow}/dispatches" \
+            -H "$AUTH" \
+            -H "Content-Type: application/json" \
+            -d '{"ref":"main"}')
+
+          if [ "$HTTP_CODE" != "204" ]; then
+            echo "WARNING: workflow dispatch returned HTTP $HTTP_CODE (expected 204)"
+            exit 0
+          fi
+          echo "Workflow dispatched. Waiting for run to appear..."
+
+          # Wait for new run to appear
+          DEADLINE=$(($(date +%s) + ${toString appearTimeout}))
+          RUN_NUMBER=""
+          while [ -z "$RUN_NUMBER" ] && [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            sleep 5
+            RUN_NUMBER=$(${curl} -sf -H "$AUTH" "$API/actions/tasks?limit=5" \
+              | ${jq} --argjson latest "$LATEST" \
+                '[.workflow_runs[] | select(.run_number > $latest)] | .[0].run_number // empty')
+          done
+
+          if [ -z "$RUN_NUMBER" ]; then
+            echo "WARNING: smoke test run did not appear within ${toString appearTimeout}s"
+            exit 0
+          fi
+          echo "Smoke test run #$RUN_NUMBER started. Polling for completion..."
+
+          # Poll until completion
+          DEADLINE=$(($(date +%s) + ${toString maxWait}))
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            STATUS=$(${curl} -sf -H "$AUTH" "$API/actions/tasks?limit=10" \
+              | ${jq} -r --argjson rn "$RUN_NUMBER" \
+                '[.workflow_runs[] | select(.run_number == $rn)] |
+                 if any(.[]; .status == "failure") then "failure"
+                 elif any(.[]; .status == "running") then "running"
+                 elif any(.[]; .status == "cancelled") then "cancelled"
+                 else "success" end')
+
+            if [ "$STATUS" != "running" ]; then
+              break
+            fi
+            sleep ${toString pollInterval}
+          done
+
+          case "$STATUS" in
+            success)   echo "=== Post-upgrade smoke tests PASSED (run #$RUN_NUMBER) ===" ;;
+            failure)   echo "WARNING: Post-upgrade smoke tests FAILED (run #$RUN_NUMBER)" ;;
+            cancelled) echo "WARNING: Post-upgrade smoke tests CANCELLED (run #$RUN_NUMBER)" ;;
+            running)   echo "WARNING: Post-upgrade smoke tests still running after ${toString maxWait}s (run #$RUN_NUMBER)" ;;
+            *)         echo "WARNING: Post-upgrade smoke tests unknown status '$STATUS' (run #$RUN_NUMBER)" ;;
+          esac
+        ) || echo "WARNING: Post-upgrade smoke test trigger failed (non-fatal)"
+      '';
+    };
+    calibre.enable = false;
     calibre-web.enable = true;
     filebrowser.enable = true;
     freshrss.enable = true;
     forgejo.enable = true;
+    forgejo-log-scraper.enable = true;
     garage.enable = true;
     harmonia.enable = true;
     immich.enable = true;
     jellyfin.enable = true;
     jellyseerr.enable = true;
+    karakeep.enable = true;
     mimir.enable = true;
     kavita.enable = false;
     loki.enable = true;
@@ -53,6 +154,8 @@ in {
     navidrome.enable = true;
     nix-cache-proxy.enable = true;
     nut-client.enable = true;
+    llama-swap.enable = true;
+    ollama.enable = true;
     open-webui.enable = true;
     paperless.enable = true;
     pinchflat.enable = true;
@@ -60,18 +163,42 @@ in {
     prowlarr.enable = true;
     radarr.enable = true;
     readarr.enable = true;
+    redis.enable = true;
     roon-server.enable = false;
     sabnzbd.enable = true;
     scanner.enable = true;
+    searxng.enable = true;
     sonarr.enable = true;
     syncoid.enable = true;
+    tempo.enable = true;
     tailscale.enable = true;
+    ntfy.enable = true;
+    ntfy.baseURL = "https://ntfy.bobtail-clownfish.ts.net";
     wallabag.enable = true;
     webdav.enable = true;
   };
 
+  # Monitor Loki for missing host log data — fires HostLogsMissing alert
+  services.loki-host-monitor = {
+    enable = true;
+    lokiUrl = "http://localhost:3100";
+    expectedHosts = builtins.attrNames (
+      lib.filterAttrs (_: spec: spec.shouldMonitor or true) nixosHostSpecs
+    );
+  };
+
   environment.systemPackages = with pkgs; [
-    beets-unstable
+    beets
+    dolt
+    # restic is provided as a wrapper in restic.nix
+    (unstablePkgs.llama-cpp.override {vulkanSupport = true;})
+    vulkan-tools
+    pciutils
+    amdgpu_top
+    python3Packages.huggingface-hub
+    toolbox
+    # Tests require network access (GGUF model metadata fetching) which fails in nix sandbox
+    (inputs.llmfit.packages.${hostSpec.system}.default.overrideAttrs {doCheck = false;})
   ];
 
   services.clubcotton.harmonia = {
@@ -85,6 +212,32 @@ in {
     };
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
+  services.clubcotton.redis = {
+    bindAddress = "0.0.0.0";
+    openFirewall = true;
+    maxMemory = "4gb";
+    # To enable authentication:
+    # 1. agenix -e redis-password.age  (add a strong password)
+    requirePassFile = config.age.secrets.redis-password.path;
+    zfsDataset = {
+      name = "ssdpool/local/redis";
+      properties = {
+        recordsize = "64K";
+        mountpoint = "/ssdpool/local/redis";
+        compression = "lz4";
+        atime = "off";
+        quota = "50G";
+        "com.sun:auto-snapshot" = "true";
+      };
+    };
+  };
+
   services.clubcotton.mimir = {
     s3.endpoint = "nas-01:3900";
     s3.environmentFile = config.age.secrets."mimir-s3".path;
@@ -93,6 +246,12 @@ in {
   services.clubcotton.loki = {
     s3.endpoint = "nas-01:3900";
     s3.environmentFile = config.age.secrets."loki-s3".path;
+    rulesDir = ../../../clubcotton/services/loki/rules;
+  };
+
+  services.clubcotton.tempo = {
+    s3.endpoint = "nas-01:3900";
+    s3.environmentFile = config.age.secrets."tempo-s3".path;
   };
 
   services.clubcotton.nix-cache-proxy.zfsDataset = {
@@ -126,38 +285,22 @@ in {
     };
   };
 
-  # Configure distributed build fleet
+  # Worker role: accept distributed builds but do NOT redelegate.
+  # nix-01 is the sole in-repo coordinator (see hosts/nixos/nix-01/default.nix);
+  # CI (.forgejo/workflows/nix-check.yaml) also coordinates via its own SSH config.
+  # Keeping coordinator.enable here preserves signing/cache plumbing for this host
+  # (which runs Harmonia). Empty `builders` prevents the full-mesh cascade deadlock.
   services.nix-builder.coordinator = {
     enable = true;
     sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
     signingKeyPath = config.age.secrets."harmonia-signing-key".path;
-    enableLocalBuilds = true; # nas-01 builds locally, no SSH to itself
-    builders = [
-      # Note: localhost removed to avoid SSH loop - enableLocalBuilds handles local builds
-      # Use .lan suffix for local DNS resolution (Tailscale names won't resolve from builder environment)
-      {
-        hostname = "nix-01.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-02.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-      {
-        hostname = "nix-03.lan";
-        systems = ["x86_64-linux"];
-        maxJobs = 16;
-        speedFactor = 1;
-        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
-      }
-    ];
+    enableLocalBuilds = true;
+    builders = [];
   };
+
+  # Raise local build concurrency to actually use this host's CPU when serving
+  # remote build requests (coordinator module caps this at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
 
   # Create builder user for remote/local builds
   users.users.nix-builder = {
@@ -180,7 +323,7 @@ in {
     mode = "single-nic";
     interfaces = ["enp65s0"];
     bridgeName = "br0";
-    enableIncusBridge = false; # nas-01 doesn't run Incus, but needs VLAN access
+    enableIncusBridge = true;
     enableVlans = true;
     nativeVlan = {
       id = 5;
@@ -196,7 +339,7 @@ in {
   services.rpcbind.enable = true;
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.clubcotton.pinchflat = {
     mediaDir = "/media/youtube/pinchflat";
@@ -258,6 +401,10 @@ in {
       enable = true;
       passwordFile = config.age.secrets."tfstate-database".path;
     };
+    honcho = {
+      enable = true;
+      passwordFile = config.age.secrets."honcho-database".path;
+    };
   };
 
   services.clubcotton.filebrowser = {
@@ -294,6 +441,84 @@ in {
     };
   };
 
+  services.clubcotton.ollama = {
+    acceleration = "rocm";
+    models = "/models/ollama";
+    loadModels = ["llama3.1:70b" "llama3.2:3b"];
+    environmentVariables = {
+      OLLAMA_FLASH_ATTENTION = "1";
+    };
+  };
+
+  # Create /models/ollama before ollama.service namespace setup (ReadWritePaths requires it to exist).
+  systemd.services.ollama-models-dir = {
+    description = "Create Ollama models directory";
+    before = ["ollama.service"];
+    requiredBy = ["ollama.service"];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      ${pkgs.coreutils}/bin/mkdir -p /models/ollama
+      ${pkgs.coreutils}/bin/chmod 1777 /models/ollama
+    '';
+  };
+
+  services.clubcotton.llama-swap = {
+    port = 8090;
+    modelsDir = "/models";
+    llamaCppPackage = unstablePkgs.llama-cpp.override {vulkanSupport = true;};
+    defaultTtl = 1800;
+    defaultModelArgs = "-ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+    settings = {
+      healthCheckTimeout = 300;
+      models = {
+        "glm-5-ud-iq2_xxs" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/GLM-5-UD-IQ2_XXS-00001-of-00006.gguf -ngl 16 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.5-35b-a3b-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.5-35b-a3b-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.5-35B-A3B-UD-Q8_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k_xl-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k_xl-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K_XL.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k-coding" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K.gguf --ctx-size 262144 --parallel 1 --temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.00 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "qwen3.6-35b-a3b-q6_k-general" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/Qwen3.6-35B-A3B-UD-Q6_K.gguf --ctx-size 262144 --parallel 1 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.00 --presence-penalty 1.5 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "embeddinggemma-300m-qat-q8_0" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/embeddinggemma-300m-qat-Q8_0.gguf --embeddings -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "gte-qwen2-1.5b-instruct" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gte-Qwen2-1.5B-instruct-Q8_0.gguf --embeddings --pooling last -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "gemma-4-31b-it-f16" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-31B-it-f16.gguf --mmproj /models/mmproj-gemma-4-31B-it-bf16.gguf --ctx-size 16384 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+        "gemma-4-26b-a4b-it-bf16" = {
+          cmd = "${lib.getExe' (unstablePkgs.llama-cpp.override {vulkanSupport = true;}) "llama-server"} --port \${PORT} -m /models/gemma-4-26B-A4B-it-BF16-00001-of-00002.gguf --ctx-size 262144 --parallel 1 -ngl 99 --split-mode layer --flash-attn on --metrics --no-webui";
+          ttl = 1800;
+        };
+      };
+    };
+  };
+
   services.clubcotton.open-webui = {
     package = unstablePkgs.open-webui.overridePythonAttrs (oldAttrs: {
       dependencies =
@@ -306,9 +531,10 @@ in {
     tailnetHostname = "llm";
     environment = {
       WEBUI_AUTH = "True";
-      ENABLE_OLLAMA_API = "True";
-      OLLAMA_BASE_URL = "http://toms-mini:11434";
-      OLLAMA_API_BASE_URL = "http://toms-mini:11434";
+      ENABLE_OLLAMA_API = "False";
+      ENABLE_OPENAI_API = "True";
+      OPENAI_API_BASE_URL = "http://127.0.0.1:8090/v1";
+      OPENAI_API_KEY = "not-needed";
     };
     environmentFile = config.age.secrets.open-webui.path;
   };
@@ -364,8 +590,27 @@ in {
     };
   };
 
+  services.clubcotton.searxng = {
+    port = 8890;
+    environmentFile = config.age.secrets.searxng.path;
+  };
+
   services.clubcotton.wallabag = {
     dataDir = "/media/documents/wallabag";
+  };
+
+  services.clubcotton.karakeep = {
+    # Route AI inference through the local llama-swap endpoint.
+    # OPENAI_API_KEY is required but unused by llama-swap.
+    extraEnvironment = {
+      OPENAI_BASE_URL = "http://nas-01:8090/v1";
+      OPENAI_API_KEY = "not-needed";
+      INFERENCE_TEXT_MODEL = "qwen3.6-35b-a3b-q6_k-coding";
+      INFERENCE_CONTEXT_LENGTH = "16384";
+      INFERENCE_JOB_TIMEOUT_SEC = "180";
+      EMBEDDING_TEXT_MODEL = "gte-qwen2-1.5b-instruct";
+      INFERENCE_IMAGE_MODEL = "gemma-4-31b-it-f16";
+    };
   };
 
   services.clubcotton.kavita = {
@@ -422,7 +667,7 @@ in {
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
@@ -449,12 +694,12 @@ in {
   '';
 
   networking.firewall = {
-    enable = variables.firewallEnable;
-    # CUPS printing, NFS, rpcbind
-    allowedTCPPorts = [631 2049 111];
+    enable = hostSpec.firewallEnable;
+    # CUPS printing, NFS, rpcbind, postgres
+    allowedTCPPorts = [631 2049 111 5432];
     allowedUDPPorts = [631];
   };
-  networking.hostId = variables.hostId;
+  networking.hostId = hostSpec.hostId;
 
   # CUPS PDF service for paperless consumption
   services.printing = {
@@ -522,6 +767,7 @@ in {
   systemd.tmpfiles.rules = [
     "d /var/lib/paperless/consume/bcotton 0775 bcotton lp - -"
     "d /var/lib/paperless/consume/tomcotton 0775 tomcotton lp - -"
+    "d /models/ollama 0755 ollama ollama - -"
   ];
 
   # Ensure users are in the lp group so cups can write files they can read
@@ -537,11 +783,51 @@ in {
   # Always run `nixos-rebuild dry-activate` before switching.
   disko.zfs = {
     enable = true;
+    # `normalization` is a create-time-only ZFS property. Existing pools were
+    # created with normalization=none and disko-zfs cannot change it; it logs
+    # an ERROR per pool on every activation. Ignore the property so disko-zfs
+    # skips the comparison entirely. The rootFsOptions value (formD) still
+    # applies to any pool created fresh via disko. See issue #396.
+    settings.ignoredProperties = ["normalization"];
+    # Incus stores its own datasets inside ssdpool/local/incus and creates them
+    # dynamically (one per instance/image/etc.). disko-zfs must not destroy
+    # these on activation.
+    settings.ignoredDatasets = [
+      "ssdpool/local/incus/buckets"
+      "ssdpool/local/incus/buckets/*"
+      "ssdpool/local/incus/containers"
+      "ssdpool/local/incus/containers/*"
+      "ssdpool/local/incus/custom"
+      "ssdpool/local/incus/custom/*"
+      "ssdpool/local/incus/deleted"
+      "ssdpool/local/incus/deleted/*"
+      "ssdpool/local/incus/images"
+      "ssdpool/local/incus/images/*"
+      "ssdpool/local/incus/virtual-machines"
+      "ssdpool/local/incus/virtual-machines/*"
+    ];
     settings.datasets = {
       # --- ssdpool datasets ---
       # NOTE: ssdpool/local/database, forgejo, garage, nix-cache, nix-cache-proxy
       # are declared by their respective service modules via zfsDataset option
       "ssdpool/local" = {};
+      "ssdpool/local/incus" = {
+        properties = {
+          mountpoint = "legacy";
+          canmount = "off";
+          recordsize = "16K";
+          compression = "lz4";
+          atime = "off";
+        };
+      };
+      "ssdpool/local/models" = {
+        properties = {
+          mountpoint = "/models";
+          compression = "lz4";
+          atime = "off";
+          quota = "500G";
+        };
+      };
       "ssdpool/local/reserved" = {
         properties = {
           reservation = "200G";
@@ -652,6 +938,7 @@ in {
       "backuppool/local/nas-01/photos" = {};
       "backuppool/local/nas-01/tomcotton-audio-library" = {};
       "backuppool/local/nas-01/tomcotton-data" = {};
+      "backuppool/local/nas-01/redis" = {};
       "backuppool/local/nas-01/var-lib" = {};
       "backuppool/local/postgresql" = {
         properties = {
@@ -719,11 +1006,6 @@ in {
       #     };
       #   };
       # };
-      volumes = {
-        "local/incus" = {
-          size = "300G";
-        };
-      };
     };
 
     mediapool = {
@@ -751,6 +1033,9 @@ in {
     datasets."ssdpool/local/nix-cache" = {
       useTemplate = ["backup"];
     };
+    datasets."ssdpool/local/redis" = {
+      useTemplate = ["backup"];
+    };
     datasets."mediapool/local/photos" = {
       useTemplate = ["media"];
     };
@@ -764,6 +1049,14 @@ in {
       useTemplate = ["media"];
     };
   };
+
+  # AMD GPU monitoring (Radeon AI Pro R9700)
+  clubcotton.amdgpu-monitoring.enable = true;
+
+  # Keep both R9700 GPUs awake so metrics are always reported
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x1002", ATTR{device}=="0x7551", ATTR{power/control}="on"
+  '';
 
   # Enhanced monitoring for nas-01 specific disks
   services.prometheus.exporters.smartctl = {
@@ -794,5 +1087,5 @@ in {
     cacheUrl = "http://nas-01.lan:80";
   };
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

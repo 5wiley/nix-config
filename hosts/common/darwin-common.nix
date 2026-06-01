@@ -5,44 +5,41 @@
   inputs,
   lib,
   localPackages,
-  hostName,
+  hostSpec,
   ...
-}: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ./lib.nix;
-  variables = commonLib.getHostVariables hostName;
-in {
+}: {
   config = {
     system.stateVersion = 5;
 
-    nix = {
+    # Nix settings — skipped when nix.enable = false (Determinate Nix)
+    nix = lib.mkIf config.nix.enable {
       #package = lib.mkDefault pkgs.unstable.nix;
       settings = {
         experimental-features = ["nix-command" "flakes"];
         warn-dirty = false;
+        system-features = lib.mkIf hostSpec.linuxBuilderEnable [
+          "nixos-test"
+          "apple-virt"
+        ];
       };
-    };
 
-    # pins to stable as unstable updates very often
-    nix.registry.nixpkgs.flake = inputs.nixpkgs;
-    nix.registry = {
-      n.to = {
-        type = "path";
-        path = inputs.nixpkgs;
+      # pins to stable as unstable updates very often
+      registry.nixpkgs.flake = inputs.nixpkgs;
+      registry = {
+        n.to = {
+          type = "path";
+          path = inputs.nixpkgs;
+        };
+        u.to = {
+          type = "path";
+          path = inputs.nixpkgs-unstable;
+        };
       };
-      u.to = {
-        type = "path";
-        path = inputs.nixpkgs-unstable;
-      };
-    };
 
-    # Linux builder for building Linux packages on macOS
-    # Enable per-host via variables.nix: linuxBuilderEnable = true;
-    nix.linux-builder.enable = variables.linuxBuilderEnable;
-    nix.settings.system-features = lib.mkIf variables.linuxBuilderEnable [
-      "nixos-test"
-      "apple-virt"
-    ];
+      # Linux builder for building Linux packages on macOS
+      # Enable per-host via hostSpec: linuxBuilderEnable = true;
+      linux-builder.enable = hostSpec.linuxBuilderEnable;
+    };
 
     # This can't be in home manager, so put in in the darwin config
     # it checks against the home-manager users to see if the daemon should be enabled
@@ -112,6 +109,12 @@ in {
           enabledUsers = builtins.filter (user: config.home-manager.users.${user}.programs.arc-tab-archiver.enable or false) (builtins.attrNames config.home-manager.users);
           firstUser = builtins.head enabledUsers;
           userCfg = config.home-manager.users.${firstUser}.programs.arc-tab-archiver;
+          userHome = config.home-manager.users.${firstUser}.home.homeDirectory;
+          # launchd does not expand ~ in EnvironmentVariables, so resolve it here.
+          obsidianDir =
+            if lib.hasPrefix "~/" userCfg.obsidianDir
+            then "${userHome}/${lib.removePrefix "~/" userCfg.obsidianDir}"
+            else userCfg.obsidianDir;
         in {
           arc-tab-archiver = {
             serviceConfig = {
@@ -119,7 +122,7 @@ in {
               StartInterval = userCfg.interval;
               RunAtLoad = true;
               EnvironmentVariables = {
-                OBSIDIAN_DIR = userCfg.obsidianDir;
+                OBSIDIAN_DIR = obsidianDir;
               };
               StandardOutPath = "/tmp/arc-tab-archiver.log";
               StandardErrorPath = "/tmp/arc-tab-archiver.log";

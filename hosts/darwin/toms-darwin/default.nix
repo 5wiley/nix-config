@@ -5,14 +5,11 @@
   lib,
   inputs,
   config,
-  hostName,
+  hostSpec,
   ...
 }:
 with lib; let
   inherit (inputs) nixpkgs nixpkgs-unstable;
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   cfg = config.services.clubcotton.toms-darwin;
 in {
   options.services.clubcotton.toms-darwin = {
@@ -50,9 +47,9 @@ in {
     # ];
 
     # Common Configuration
-    users.users.${variables.primaryUser}.home = "/Users/${variables.primaryUser}";
+    users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
 
-    system.primaryUser = variables.primaryUser;
+    system.primaryUser = hostSpec.primaryUser;
 
     # These are packages are just for darwin systems
     environment.systemPackages = [

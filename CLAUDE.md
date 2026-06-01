@@ -57,17 +57,43 @@ nixos-rebuild switch --flake .#hostname \
 ### CI / Forgejo Actions
 
 ```bash
-just ci                      # List recent Forgejo Action runs
-just ci -n 20                # List last 20 runs
-just ci -s failure           # Show only failed runs
-just ci -b main              # Filter by branch
-just ci show 401             # Show details of run #401
-just ci logs 401             # Show logs for run #401
-just ci logs 401 1           # Show logs for job index 1 of run #401
+fj run list                  # List recent Forgejo Action runs
+fj run list -L 20            # List last 20 runs
+fj run list -s failure       # Show only failed runs
+fj run list -b main          # Filter by branch
+fj run view 401              # Show details of run #401
+fj run logs 401              # Show logs for run #401
+fj run logs 401 -j 1         # Show logs for job index 1 of run #401
 ```
 
-The script reads your API token from the `tea` CLI config at `~/.config/tea/config.yml`.
-Override with `FORGEJO_TOKEN` env var if needed.
+Authentication is managed by `fj auth`. Check status with `fj auth status`.
+
+### Infrastructure Tooling Scripts
+
+Shared library and CLI tools in `scripts/` for host lookup, CI analysis, and issue triage.
+CI analysis and issue-check scripts source `scripts/lib/common.sh` for Loki detection and formatting.
+
+```bash
+# Host lookup (parses flake-modules/hosts.nix, no nix eval)
+just host-lookup 192.168.5.49         # Resolve IP to hostname
+just host-lookup dns-01               # Resolve hostname to IP
+just host-lookup --list               # Show all hosts
+
+# Forgejo issue/PR management (via fj CLI)
+fj issue list -l bug                  # List open bugs
+fj issue create -t "host: desc" -b "..." -l bug
+fj issue close 42 -c "Fixed in #43"
+fj issue comment 42 -b "Still investigating"
+fj pr create -t "fix" -b "..." -H branch
+
+# CI failure analysis
+just ci-analyze 603                   # Analyze failed run (with Loki correlation)
+just ci-analyze 603 --no-loki        # Skip Loki queries
+
+# Issue fixed-check (git history + Loki)
+just issue-check-fixed 66             # Check if issue appears fixed
+just issue-check-fixed 66 --no-loki  # Skip Loki queries
+```
 
 ### Testing
 
@@ -141,8 +167,13 @@ Services are organized under `clubcotton/services/` with each having:
 The repository manages a comprehensive media server stack including:
 - Media management (Jellyfin, Navidrome, Calibre-web)
 - Download automation (*arr suite, SABnzbd)
-- Monitoring (Prometheus, Grafana)
+- Monitoring (Prometheus, Grafana, Loki)
 - Infrastructure services (PostgreSQL, networking, storage)
+
+### Service Endpoints
+
+- **Prometheus**: `http://admin:9001` (alerts at `http://admin:9001/alerts`)
+- **Loki**: `http://nas-01.lan:3100`
 
 ### Package Overlays
 
@@ -176,18 +207,54 @@ Uses `agenix` for secret encryption. Secrets are defined in `secrets/secrets.nix
 
 When working with features that require secrets:
 1. Add the secret definition to `secrets/secrets.nix` (this is safe - just metadata)
-2. Reference the secret in your configuration using `config.age.secrets.<name>.path`
-3. Leave clear instructions for the user to create/edit the actual encrypted secret file using `agenix -e <secret-name>.age`
-4. Document what content/format the secret file should contain
+2. **Stop and give the user instructions** to create the `.age` file before proceeding. The nix build will fail if the `.age` file doesn't exist. Include the `agenix -e` command, what content/format to use, and any required permissions (e.g., API token scopes).
+3. **Wait for the user to confirm** the secret is created before continuing with the build.
+4. Reference the secret in your configuration using `config.age.secrets.<name>.path`
 
 Example instructions to provide:
 ```bash
-# After this configuration is applied, create the secret:
-agenix -e new-secret.age
-# Then add the required content (e.g., password, API key, etc.)
+cd secrets && agenix -e new-secret.age
+# Paste the raw API token (or whatever format the service expects)
 ```
 
 See `secrets/README-NIX-CACHE.md` for an example of proper secret documentation.
+
+### Generating Secret Values
+
+When a service needs a random secret key (e.g., session secret, API key), provide the user with shell commands to generate it:
+
+```bash
+# Generate a random hex secret (64 chars)
+openssl rand -hex 32
+
+# Generate a random base64 secret
+openssl rand -base64 32
+```
+
+The generated value goes into the agenix-encrypted file in the format the service expects. For example, services using `environmentFile` expect `KEY=value` format:
+
+```bash
+cd secrets && agenix -e service-name.age
+# Content: SERVICE_SECRET_KEY=<paste-generated-value>
+```
+
+## Git Operations
+
+- When pushing to git remotes, always check SSH agent status and key availability first (`ssh-add -l`). If SSH push fails, do NOT retry repeatedly — report the issue and let the user handle auth.
+- When creating worktrees, use the project convention of `../<branch-name>` (sibling to `default/`), not in `/tmp/`. See existing worktrees with `git worktree list` for the convention.
+- Be careful not to modify `flake.lock` during investigation. Always check `git diff` before committing to ensure no accidental lock file changes.
+
+## APIs & Services
+
+- This project uses **Forgejo**, not GitHub. Use the `fj` CLI (a `gh` clone for Forgejo) for all Forgejo interactions. Do NOT use `gh` CLI or GitHub APIs.
+- Use `fj issue list`, `fj issue create`, `fj pr create`, `fj run list`, etc. for issue, PR, and CI management. Use `fj api` for any endpoints not covered by dedicated subcommands.
+- Any bugs or deficiencies found in `fj` should be logged as issues on the `bcotton/fj` repo on Forgejo using `fj issue create -R bcotton/fj`.
+
+## CI/CD Debugging
+
+- For CI/build failures, SSH into the runner machines to investigate directly rather than trying to fetch logs via web APIs.
+- Runner hosts: nix-01 (nix-01-runner-1, nix-01-runner-2), nix-03 (nix-03-runner-1, nix-03-runner-2).
+- Use `just ci logs <run-id>` or `just ci-analyze <run-id>` for quick log access.
 
 ## Development Notes
 
@@ -201,12 +268,11 @@ See `secrets/README-NIX-CACHE.md` for an example of proper secret documentation.
   - Pre-commit hook runs `just fmt` to ensure all code is formatted before commit
   - No need to run 'just fmt', unless you want to syntax check the code
 - Don't forget to 'git add' new files before building with nix. This will save you an error step
+- **ZFS dataset safety**: When adding or modifying a `zfsDataset` option in a service module, always run `just dry-activate <hostname>` (requires root) before deploying. Review the output for any destructive ZFS actions (dataset destroy/rollback). The disko-zfs module auto-detects pools and will **destroy undeclared datasets**, so verify no existing datasets are accidentally dropped.
+- **Auto-upgrade health checks**: When adding or modifying `healthChecks.extraScript` in a host's auto-upgrade config, ensure any commands used are available in PATH. The module provides a base set of common utilities (coreutils, gawk, gnugrep, gnused, findutils), but host-specific tools (e.g., `incus`) must be added via `healthChecks.extraScriptPackages`. Missing packages cause health checks to fail silently with "command not found", which triggers an automatic reboot to roll back. See `modules/auto-upgrade/default.nix` for the base path.
+- **Upgrade checklist**: Before upgrading NixOS releases, review `docs/UPGRADE_CHECKLIST.md` for workarounds that may need to be revisited (disabled exporters, replaced packages, etc.).
 
 
-
-## Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 

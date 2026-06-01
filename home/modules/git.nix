@@ -3,9 +3,11 @@
 {pkgs, ...}: {
   programs.git = {
     enable = true;
-    userEmail = "bob.cotton@gmail.com";
-    userName = "Bob Cotton";
-    extraConfig = {
+    settings = {
+      user = {
+        email = "bob.cotton@gmail.com";
+        name = "Bob Cotton";
+      };
       alias = {
         br = "branch";
         co = "checkout";
@@ -18,6 +20,7 @@
         lga = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%C(bold blue)<%an>%Creset' --abbrev-commit --all";
         clone-gwt = "!sh $HOME/.config/git-worktrees/git-clone-bare-for-worktrees.sh";
         beads-init = "!sh $HOME/.config/beads-init/beads-init.sh";
+        whatchanged = "log --raw --no-merges";
       };
       url = {
         "ssh://git@github.com/" = {
@@ -35,22 +38,25 @@
         colorMoved = "default";
       };
     };
-    difftastic = {
-      enable = false;
-      background = "dark";
-      display = "side-by-side";
-    };
     includes = [
       {path = "${pkgs.delta}/share/themes.gitconfig";}
     ];
-    delta = {
-      enable = true;
-      options = {
-        features = "collared-trogon";
-        navigate = true;
-        light = false;
-        side-by-side = true;
-      };
+  };
+  programs.difftastic = {
+    enable = false;
+    options = {
+      background = "dark";
+      display = "side-by-side";
+    };
+  };
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      features = "collared-trogon";
+      navigate = true;
+      light = false;
+      side-by-side = true;
     };
   };
 }

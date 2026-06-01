@@ -11,33 +11,45 @@
     ./borgmatic
     ./calibre
     ./calibre-web
+    ./claude-relay
     ./cloudflare-tunnel
     ./filebrowser
     ./forgejo
+    ./forgejo-log-scraper
     ./freshrss
     ./garage
     ./harmonia
+    ./hermes
+    ./honcho
     ./homepage
     ./hyprland
     ./immich
+    ./incus-vm
     ./jellyfin
+    ./karakeep
     ./kavita
+    ./llama-swap
     ./loki
     ./mimir
     ./navidrome
+    ./ntfy
     ./nix-cache-proxy
     ./obsidian
     ./nut-client
     ./nut-server
+    ./ollama
     ./open-webui
     ./paperless
     ./pinchflat
+    ./redis
     ./restic
     ./roon-server
     ./sabnzbd
     ./scanner
+    ./searxng
     ./syncoid
     ./technitium
+    ./tempo
     ./wallabag
     ./webdav
   ];

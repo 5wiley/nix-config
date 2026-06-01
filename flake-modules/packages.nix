@@ -10,6 +10,16 @@
         # Cross-platform packages
         primp = pkgs.python3Packages.callPackage ../pkgs/primp {};
         gwtmux = pkgs.callPackage ../pkgs/gwtmux {};
+        # playwright-cli: Token-efficient browser automation CLI for AI coding agents
+        playwright-cli = pkgs.callPackage ../pkgs/playwright-cli (
+          lib.optionalAttrs pkgs.stdenv.isDarwin {chromium = null;}
+        );
+        # weave: Entity-level semantic merge driver for Git
+        weave = pkgs.callPackage ../pkgs/weave {};
+        # pg-scram-hash: Generate PostgreSQL SCRAM-SHA-256 password hashes
+        pg-scram-hash = pkgs.callPackage ../pkgs/pg-scram-hash {};
+        # hermes-webhook-tools: Configure Hermes webhook routes and proxy Forgejo webhooks
+        hermes-webhook-tools = pkgs.callPackage ../pkgs/hermes-webhook-tools {};
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -21,9 +31,13 @@
         notification-receiver = pkgs.callPackage ../pkgs/notification-receiver {};
         # arc-tab-archiver: Capture auto-archived Arc browser tabs to Obsidian
         arc-tab-archiver = pkgs.callPackage ../pkgs/arc-tab-archiver {};
+        # mole: macOS system maintenance, cleaning, and monitoring tool
+        mole = pkgs.callPackage ../pkgs/mole {};
       }
       # Linux-only packages
       // lib.optionalAttrs pkgs.stdenv.isLinux {
+        # honcho: AI agent memory and social cognition server
+        honcho = pkgs.callPackage ../pkgs/honcho {};
         # xdg-open-remote: Send URLs through SSH tunnel to open on remote desktop
         xdg-open-remote = pkgs.callPackage ../pkgs/xdg-open-remote {};
         # remote-copy: Send text through SSH tunnel to copy on remote desktop
@@ -32,21 +46,19 @@
         remote-notify = pkgs.callPackage ../pkgs/remote-notify {};
         # osc52-copy: Copy to clipboard via OSC52 escape sequence (for tmux-fingers)
         osc52-copy = pkgs.callPackage ../pkgs/osc52-copy {};
-        # playwright-cli: Token-efficient browser automation CLI for AI coding agents
-        playwright-cli = pkgs.callPackage ../pkgs/playwright-cli {};
       };
 
     # Expose localPackages via legacyPackages for backward compatibility
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux;
+        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash hermes-webhook-tools;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
-        inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver;
+        inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;
       }
       // lib.optionalAttrs pkgs.stdenv.isLinux {
-        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy playwright-cli;
+        inherit (config.packages) xdg-open-remote remote-copy remote-notify osc52-copy honcho;
       };
   };
 }

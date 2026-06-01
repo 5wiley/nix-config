@@ -42,6 +42,15 @@ in {
     };
   };
   config = lib.mkIf cfg.enable {
+    # Create atuin user/group as system accounts so they exist during
+    # activation (needed for agenixChown, which runs before systemd services).
+    # Without this, DynamicUser would only create them at service start time.
+    users.users.atuin = {
+      isSystemUser = true;
+      group = "atuin";
+    };
+    users.groups.atuin = {};
+
     services.${service} = {
       enable = true;
       openRegistration = true;
@@ -49,6 +58,9 @@ in {
       database.uri = null;
     };
     systemd.services.atuin.serviceConfig = {
+      DynamicUser = lib.mkForce false;
+      User = "atuin";
+      Group = "atuin";
       EnvironmentFile = config.age.secrets.atuin.path;
     };
     services.tsnsrv = {

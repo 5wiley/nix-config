@@ -4,24 +4,21 @@
   unstablePkgs,
   lib,
   inputs,
-  hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in {
   config = {
     ids.uids.nixbld = 300;
 
-    system.primaryUser = variables.primaryUser;
-    users.users.${variables.primaryUser}.home = "/Users/${variables.primaryUser}";
+    system.primaryUser = hostSpec.primaryUser;
+    users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
 
     # These are packages are just for darwin systems
     environment.systemPackages = with pkgs; [
       kind
-      esphome
+      # esphome  # disabled: depends on bleak which is Linux-only
       esptool
       # Node and friends
       nodejs_22
@@ -32,7 +29,7 @@ in {
     nixpkgs.config.allowUnfree = true;
     nixpkgs.config.overlays = [
       (final: prev:
-        lib.optionalAttrs (prev.stdenv.system == "aarch64-darwin") {
+        lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
           # Add access to x86 packages system is running Apple Silicon
           pkgs-x86 = import nixpkgs {
             system = "x86_64-darwin";

@@ -4,11 +4,15 @@
   lib,
   unstablePkgs,
   crushPackage,
+  fjPackage,
+  gwsPackage,
+  localPackages,
   inputs,
   ...
 }: {
   imports = [
     inputs.nix-openclaw.homeManagerModules.openclaw
+    inputs.nix-index-database.homeModules.default
   ];
 
   home.stateVersion = "24.05";
@@ -23,6 +27,7 @@
   # Add pnpm local bin to user's shell PATH
   home.sessionPath = [
     "/home/larry/node_modules/.bin"
+    "/home/larry/.local/bin"
   ];
 
   # ─────────────────────────────────────────────────────────────
@@ -50,6 +55,9 @@
       gl = "git log --oneline -20";
       gco = "git checkout";
 
+      # Nix
+      nix-options = "xdg-open https://search.nixos.org/options";
+
       # Navigation
       ".." = "cd ..";
       "..." = "cd ../..";
@@ -66,13 +74,14 @@
       # Starship prompt
       eval "$(starship init zsh)"
 
-      # Wire up completions for aliased commands
-      compdef ls=eza
-      compdef ll=eza
-      compdef lt=eza
-      compdef cat=bat
-      compdef grep=rg
-      compdef find=fd
+      # Wire up completions for aliased commands.
+      # Use `compdef _func cmd` (not `compdef cmd=other`) — the alias form
+      # requires the target's completion to be pre-registered, which doesn't
+      # happen for autoloaded completion functions until first use.
+      compdef _eza ls ll lt
+      compdef _bat cat
+      compdef _rg grep
+      compdef _fd find
 
       # Better history
       setopt HIST_IGNORE_DUPS
@@ -131,10 +140,11 @@
   # ─────────────────────────────────────────────────────────────
   programs.git = {
     enable = true;
-    userName = "Larry";
-    userEmail = "larry@nix-02";
-
-    extraConfig = {
+    settings = {
+      user = {
+        name = "Larry";
+        email = "larry@nix-02";
+      };
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
@@ -152,16 +162,17 @@
       merge.conflictstyle = "diff3";
       diff.colorMoved = "default";
     };
+  };
 
-    # Delta for beautiful diffs
-    delta = {
-      enable = true;
-      options = {
-        navigate = true;
-        light = false;
-        side-by-side = true;
-        line-numbers = true;
-      };
+  # Delta for beautiful diffs
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      navigate = true;
+      light = false;
+      side-by-side = true;
+      line-numbers = true;
     };
   };
 
@@ -175,7 +186,21 @@
     };
   };
 
+  programs.codex = {
+    enable = true;
+    package = unstablePkgs.codex;
+  };
+
   programs.fzf = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+
+  # Nix workflow tools from
+  # https://iampavel.dev/blog/best-nixos-tools
+  # nix-index-database supplies a prebuilt index for nix-locate and comma.
+  programs.nix-index-database.comma.enable = true;
+  programs.nix-index = {
     enable = true;
     enableZshIntegration = true;
   };
@@ -233,18 +258,34 @@
 
     # Forgejo/Git workflow
     tea # Gitea/Forgejo CLI
+    fjPackage # Forgejo CLI (gh clone)
+    gwsPackage # git workspace manager
+    bws # Bitwarden Secrets Manager CLI
 
     # Development
     tldr # simplified man pages
     direnv # per-directory environments
     pnpm
-    nodejs_22
+    nodejs_24
     claude-code # Anthropic's Claude Code CLI
     crushPackage # AI coding agent
+    uv
+    python311
 
     # Nix tools
     nil # nix LSP
     alejandra # nix formatter
+    nh
+    nix-init
+    nurl
+    smfh
+    statix
+
+    # Cloud
+    google-cloud-sdk
+
+    # Playwright
+    localPackages.playwright-cli
 
     # Fun
     cowsay

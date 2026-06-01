@@ -3,10 +3,11 @@
   pkgs,
   self,
   lib,
+  nixosHostSpecs,
   ...
 }: let
   # Import the prometheus configuration library
-  promLib = import ./lib.nix {lib = pkgs.lib;};
+  promLib = import ./lib.nix {inherit lib nixosHostSpecs;};
   # Get all scrape configurations
   scrapeConfigs = promLib.mkScrapeConfigs self (config.services.prometheus.tsnsrvExcludeList or []);
 in {
@@ -125,6 +126,17 @@ in {
           ];
         }
         {
+          job_name = "tempo";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          metrics_path = "/metrics";
+          static_configs = [
+            {
+              targets = ["nas-01:3200"];
+            }
+          ];
+        }
+        {
           job_name = "garage";
           scrape_interval = "30s";
           scrape_timeout = "10s";
@@ -195,6 +207,13 @@ in {
               {
                 # Loki returns 404 at /, so probe /ready instead
                 targets = ["https://loki${promLib.tailscaleDomain}/ready"];
+              }
+              {
+                # Tempo /ready health check
+                targets = ["https://tempo${promLib.tailscaleDomain}/ready"];
+              }
+              {
+                targets = ["https://honcho${promLib.tailscaleDomain}/health"];
               }
             ];
           relabel_configs = [
@@ -277,6 +296,33 @@ in {
             {
               target_label = "job";
               replacement = "node";
+            }
+          ];
+        }
+        {
+          job_name = "incus";
+          scheme = "https";
+          metrics_path = "/1.0/metrics";
+          scrape_interval = "30s";
+          scrape_timeout = "10s";
+          tls_config = {
+            cert_file = config.age.secrets."prometheus-incus-cert".path;
+            key_file = config.age.secrets."prometheus-incus-key".path;
+            insecure_skip_verify = true;
+          };
+          static_configs = [
+            {targets = ["nas-01.lan:8443"];}
+            # Off-LAN: dns-01 only serves .lan on 192.168.5.0/24, so reach
+            # these over Tailscale MagicDNS.
+            {targets = ["condo-01.bobtail-clownfish.ts.net:8443"];}
+            {targets = ["natalya-01.bobtail-clownfish.ts.net:8443"];}
+          ];
+          relabel_configs = [
+            {
+              source_labels = ["__address__"];
+              regex = "([^.:]+)(\\..*)?:[0-9]+";
+              target_label = "instance";
+              replacement = "\${1}";
             }
           ];
         }

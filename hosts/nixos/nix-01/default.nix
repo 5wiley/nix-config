@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -21,15 +19,45 @@ in {
     ../../../modules/node-exporter
     ../../../modules/nfs
     inputs.nix-builder-config.nixosModules.coordinator
+    inputs.nix-builder-config.nixosModules.cache-pusher
     ../../../modules/incus
+    ../../../modules/incus-cluster
     ../../../modules/systemd-network
   ];
 
+  environment.systemPackages = with pkgs; [
+    dolt
+    python3Packages.huggingface-hub
+  ];
+
+  # Incus cluster controller for clubcotton site
+  services.incus-cluster = {
+    enable = true;
+    site = "clubcotton";
+    instances = import ../../../data/incus/clubcotton.nix;
+  };
+
   services.clubcotton = {
-    alloy-logs.enable = true;
+    alloy-logs = {
+      enable = true;
+      otelReceiver.enable = true;
+    };
     code-server.enable = true;
     nut-client.enable = true;
     bonob.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:30";
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+      };
+    };
     # Cloudflare Tunnel for secure internet exposure
     # To enable:
     # 1. Create tunnel in Cloudflare Zero Trust dashboard
@@ -101,9 +129,25 @@ in {
         };
       };
     };
+
+    honcho.enable = true;
+
+    # CPU-only Ollama for embeddings — offloads from nas-01 GPU to avoid
+    # llama-swap model swap thrashing between chat and embedding models.
+    ollama = {
+      enable = true;
+      acceleration = false;
+      models = "/models/ollama";
+      environmentVariables = {
+        OLLAMA_NUM_PARALLEL = "4";
+        OLLAMA_MAX_LOADED_MODELS = "1";
+      };
+    };
   };
 
-  # Configure distributed build fleet
+  # Coordinator role: nix-01 is the sole in-repo coordinator. `just deploy` from
+  # here distributes to the worker fleet (nas-01, nix-02, nix-03). Workers have
+  # empty `builders` lists so they build locally when asked and never redelegate.
   services.nix-builder.coordinator = {
     enable = true;
     sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
@@ -135,6 +179,16 @@ in {
     ];
   };
 
+  # Raise local build concurrency so nix-01's own CPU contributes to the fleet
+  # (coordinator module caps `max-jobs` at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
+
+  # Push all locally-built paths to the Harmonia cache on nas-01
+  services.nix-builder.cache-pusher = {
+    enable = true;
+    sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
+  };
+
   # Cache client already enabled via flake-modules/hosts.nix with defaults
 
   # Create builder user for remote builds
@@ -151,6 +205,7 @@ in {
     enable = true;
     dockerCompat = true;
     dockerSocket.enable = true;
+    autoPrune.enable = true;
     # Required for containers under podman-compose to be able to talk to each other.
     defaultNetwork.settings.dns_enabled = true;
   };
@@ -162,11 +217,38 @@ in {
     disk = "/dev/disk/by-id/nvme-eui.00000000000000000026b738281a1aa5";
     useStandardRootFilesystems = true;
     reservedSize = "20GiB";
-    volumes = {
-      "local/incus" = {
-        size = "300G";
+    volumes = {};
+  };
+
+  boot.zfs.extraPools = ["incus"];
+
+  # Declarative ZFS dataset for LLM models on the second SSD (incus pool / nvme1n1)
+  disko.zfs = {
+    enable = true;
+    # Ignore pool roots and all existing datasets — only manage incus/models
+    settings.ignoredDatasets = ["incus" "incus/buckets" "incus/buckets/*" "incus/containers" "incus/containers/*" "incus/custom" "incus/custom/*" "incus/deleted" "incus/deleted/*" "incus/images" "incus/images/*" "incus/virtual-machines" "incus/virtual-machines/*" "rpool" "rpool/*"];
+    settings.datasets = {
+      "incus/models" = {
+        properties = {
+          mountpoint = "/models";
+          compression = "lz4";
+          atime = "off";
+          quota = "50G";
+        };
       };
     };
+  };
+
+  # Create /models/ollama before ollama.service (ReadWritePaths requires it to exist)
+  systemd.services.ollama-models-dir = {
+    description = "Create Ollama models directory";
+    before = ["ollama.service"];
+    requiredBy = ["ollama.service"];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      ${pkgs.coreutils}/bin/mkdir -p /models/ollama
+      ${pkgs.coreutils}/bin/chmod 1777 /models/ollama
+    '';
   };
 
   # Use the systemd-boot EFI boot loader.
@@ -181,7 +263,7 @@ in {
 
   networking = {
     hostName = "nix-01";
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
   };
 
   # Configure systemd-networkd with bonding and VLANs
@@ -201,6 +283,48 @@ in {
     };
   };
 
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
+  # Daily infrastructure health report via Claude Code
+  systemd.services.infra-report = {
+    description = "Generate daily infrastructure health report via Claude Code";
+    after = ["network-online.target"];
+    wants = ["network-online.target"];
+    path = [pkgs.bash pkgs.git pkgs.claude-code pkgs.curl pkgs.jq pkgs.openssh pkgs.uv];
+
+    serviceConfig = {
+      Type = "oneshot";
+      User = "bcotton";
+      Group = "users";
+      WorkingDirectory = "/home/bcotton/nix-config/default";
+      # The report publishes a daily issue, then may continue with issue
+      # investigation and PR drafting. The 2026-06-01 run published its
+      # report but was killed at the previous 30 minute timeout while still
+      # doing follow-up work, leaving the oneshot unit failed.
+      TimeoutStartSec = "2h";
+      EnvironmentFile = "/home/bcotton/.config/sensitive/.claude-personal-env";
+      Environment = [
+        "HOME=/home/bcotton"
+        "CLAUDE_CONFIG_DIR=/home/bcotton/.claude-personal"
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"
+      ];
+      ExecStart = "${pkgs.claude-code}/bin/claude -p '/infra-report' --allowedTools 'Bash,Read,Write,Grep,Glob,Edit,Agent' --dangerously-skip-permissions";
+    };
+  };
+
+  systemd.timers.infra-report = {
+    description = "Run daily infrastructure health report at 6am";
+    wantedBy = ["timers.target"];
+    timerConfig = {
+      OnCalendar = "06:00";
+      Persistent = true;
+    };
+  };
+
   services.clubcotton.code-server = {
     tailnetHostname = "nix-01-vscode";
     user = "bcotton";
@@ -213,29 +337,25 @@ in {
   };
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
   virtualisation.libvirtd = {
     enable = true;
     qemu = {
       package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
-      };
     };
   };
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

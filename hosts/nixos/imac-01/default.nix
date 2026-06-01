@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -52,7 +50,7 @@ in {
 
   networking = {
     hostName = "imac-01";
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
 
     useDHCP = false;
     defaultGateway = "192.168.5.1";
@@ -66,32 +64,41 @@ in {
   };
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
-  virtualisation.libvirtd = {
-    enable = true;
-    qemu = {
-      package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
-      };
-    };
-  };
+  # Disable smartctl exporter on imac-01: upstream bug in v0.14.0 causes HTTP 500
+  # on every scrape due to a DescribeByCollect race condition triggered by the
+  # Apple SSD's partial ATA command support (exit status 4).
+  # See: https://github.com/prometheus-community/smartctl_exporter/issues/305
+  # Re-enable when nixpkgs ships a fixed version (check docs/UPGRADE_CHECKLIST.md).
+  services.prometheus.exporters.smartctl.enable = lib.mkForce false;
 
   services.clubcotton = {
     alloy-logs.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled" "display-manager"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+      };
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -99,5 +106,5 @@ in {
     code-cursor
   ];
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

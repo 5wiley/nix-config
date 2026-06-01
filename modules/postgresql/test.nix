@@ -33,6 +33,13 @@
         dataDir = "/var/lib/postgresql/16";
       };
 
+      # The VM test boots PostgreSQL and validates the generated config at
+      # runtime. Disable NixOS' build-time config check because it executes the
+      # postgres binary directly; rootless/local builders handle that fine, but
+      # root-run CI containers can hit PostgreSQL's "do not run as root" guard
+      # before the VM test even starts.
+      services.postgresql.checkConfig = false;
+
       # Test Immich configuration
       services.clubcotton.postgresql.immich = {
         enable = true;
@@ -56,6 +63,8 @@
         machine.succeed("systemctl is-active postgresql.service")
     with subtest("PostgreSQL is listening on custom port"):
         machine.wait_until_succeeds("nc -z localhost 5433")
+    with subtest("Wait for custom setup to complete"):
+        machine.wait_for_unit("postgresql-custom-setup.service")
     with subtest("Data directory is created"):
         machine.succeed("test -d /var/lib/postgresql")
     with subtest("Immich database and user are created"):

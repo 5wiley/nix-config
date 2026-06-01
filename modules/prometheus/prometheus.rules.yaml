@@ -153,7 +153,7 @@ groups:
       description: 'ZFS pool {{ $labels.pool }} on {{ $labels.instance }} is critically full at {{ printf "%.1f" $value }}% capacity'
 
   - alert: ZfsPoolFragmentation
-    expr: zfs_pool_fragmentation_ratio > 0.5
+    expr: zfs_pool_fragmentation_ratio > 0.7
     for: 30m
     labels:
       severity: warning
@@ -460,6 +460,32 @@ groups:
     annotations:
       description: 'Nix cache proxy on {{ $labels.instance }} is nearly full at {{ printf "%.1f" $value }}% capacity - nginx may fail to cache new packages'
 
+  # Generic Host Filesystem Monitoring (all hosts)
+  # Excludes tmpfs, overlay, nsfs, and other virtual filesystems
+  - alert: HostFilesystemSpaceLow
+    expr: |
+      (
+        (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs|fuse.lxcfs"} / node_filesystem_size_bytes) * 100 < 15
+        and node_filesystem_size_bytes > 1e9
+      ) * on(instance) group_left(nodename) node_uname_info{nodename=~".+"}
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Filesystem {{ $labels.mountpoint }} on {{ $labels.nodename }} ({{ $labels.instance }}) has only {{ printf "%.1f" $value }}% free space'
+
+  - alert: HostFilesystemSpaceCritical
+    expr: |
+      (
+        (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|nsfs|squashfs|fuse.lxcfs"} / node_filesystem_size_bytes) * 100 < 5
+        and node_filesystem_size_bytes > 1e9
+      ) * on(instance) group_left(nodename) node_uname_info{nodename=~".+"}
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: 'Filesystem {{ $labels.mountpoint }} on {{ $labels.nodename }} ({{ $labels.instance }}) has only {{ printf "%.1f" $value }}% free space — action needed immediately'
+
   # Nix Build and Cache Infrastructure Monitoring
   - alert: NixCacheNotAccessible
     expr: nix_cache_info_accessible == 0
@@ -587,6 +613,79 @@ groups:
     annotations:
       summary: "Garage block resync queue is large"
       description: "Garage on {{ $labels.instance }} has {{ $value }} blocks in the resync queue"
+
+  # Redis Monitoring
+  - alert: RedisDown
+    expr: redis_up == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Redis is down"
+      description: "Redis on {{ $labels.instance }} has been unreachable for 5 minutes"
+
+  - alert: RedisHighMemoryUsage
+    expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 80
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis memory usage high"
+      description: "Redis on {{ $labels.instance }} is using {{ printf \"%.1f\" $value }}% of max memory"
+
+  - alert: RedisMemoryCritical
+    expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 95
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Redis memory usage critical"
+      description: "Redis on {{ $labels.instance }} is at {{ printf \"%.1f\" $value }}% of max memory - writes may be rejected"
+
+  - alert: RedisHighClientConnections
+    expr: redis_connected_clients > 500
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis high client connections"
+      description: "Redis on {{ $labels.instance }} has {{ $value }} connected clients"
+
+  - alert: RedisRejectedConnections
+    expr: increase(redis_rejected_connections_total[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis rejecting connections"
+      description: "Redis on {{ $labels.instance }} has rejected {{ $value }} connections in the last 5 minutes"
+
+  - alert: RedisRdbSaveFailed
+    expr: redis_rdb_last_bgsave_status == 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis RDB save failed"
+      description: "Last Redis RDB background save failed on {{ $labels.instance }}"
+
+  - alert: RedisAofRewriteFailed
+    expr: redis_aof_last_rewrite_status == 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis AOF rewrite failed"
+      description: "Last Redis AOF rewrite failed on {{ $labels.instance }}"
+
+  - alert: RedisHighKeyEviction
+    expr: rate(redis_evicted_keys_total[5m]) > 10
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Redis evicting keys"
+      description: "Redis on {{ $labels.instance }} is evicting {{ printf \"%.1f\" $value }} keys/sec"
 
   # Grafana Mimir Monitoring
   - alert: MimirDown
@@ -733,3 +832,187 @@ groups:
     annotations:
       summary: "Loki ring has unhealthy members"
       description: "Loki ring on {{ $labels.instance }} has {{ $value }} unhealthy members"
+
+  - alert: HostLogsMissing
+    expr: loki_host_log_lines_1h == 0
+    for: 30m
+    labels:
+      severity: warning
+    annotations:
+      summary: "No logs from {{ $labels.hostname }}"
+      description: "Host {{ $labels.hostname }} has not sent any logs to Loki in the last hour. Check alloy.service on the host."
+
+  # Grafana Tempo Monitoring
+  - alert: TempoDown
+    expr: up{job="tempo"} == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Tempo is down"
+      description: "Tempo on {{ $labels.instance }} has been unreachable for 5 minutes"
+
+  - alert: TempoIngestionFailures
+    expr: rate(tempo_distributor_spans_received_total{status="error",job="tempo"}[5m]) > 0.1
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo span ingestion failures"
+      description: "Tempo on {{ $labels.instance }} is failing to ingest spans at {{ printf \"%.1f\" $value }}/sec"
+
+  - alert: TempoRequestErrors
+    expr: rate(tempo_http_requests_total{job="tempo",status_code=~"5.."}[5m]) > 0.5
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo returning server errors"
+      description: "Tempo on {{ $labels.instance }} is returning 5xx errors at {{ printf \"%.1f\" $value }}/sec for {{ $labels.route }}"
+
+  - alert: TempoHighMemoryUsage
+    expr: process_resident_memory_bytes{job="tempo"} / 1073741824 > 2
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo high memory usage"
+      description: "Tempo on {{ $labels.instance }} is using {{ printf \"%.1f\" $value }}GB of memory"
+
+  - alert: TempoCompactionFailed
+    expr: increase(tempo_compactor_blocks_failed_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo compaction failures"
+      description: "Tempo compactor on {{ $labels.instance }} has had failed runs in the last hour"
+
+  - alert: TempoWALCorruption
+    expr: increase(tempo_ingester_wal_corruptions_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Tempo WAL corruption detected"
+      description: "Tempo ingester on {{ $labels.instance }} has detected WAL corruption"
+
+  - alert: TempoBlockFlushFailures
+    expr: increase(tempo_ingester_failed_flushes_total{job="tempo"}[1h]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo block flush failures"
+      description: "Tempo ingester on {{ $labels.instance }} is failing to flush blocks to storage"
+
+  - alert: TempoHighQueryLatency
+    expr: histogram_quantile(0.95, rate(tempo_request_duration_seconds_bucket{job="tempo",route="/api/traces"}[5m])) > 5
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo high query latency"
+      description: "Tempo on {{ $labels.instance }} has p95 query latency of {{ printf \"%.2f\" $value }}s for trace queries"
+
+  - alert: TempoRingUnhealthy
+    expr: tempo_ring_members{job="tempo",state="UNHEALTHY"} > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo ring has unhealthy members"
+      description: "Tempo ring on {{ $labels.instance }} has {{ $value }} unhealthy members"
+
+  - alert: TempoS3Errors
+    expr: increase(tempo_storage_requests_total{job="tempo",status_code=~"5.."}[5m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Tempo S3 storage errors"
+      description: "Tempo on {{ $labels.instance }} is encountering S3 storage errors at {{ printf \"%.1f\" $value }}/sec"
+
+# Incus Container/VM Monitoring
+- name: incus_alerts
+  rules:
+  - alert: IncusDaemonRestarted
+    expr: resets(incus_uptime_seconds[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Incus daemon on {{ $labels.instance }} was restarted'
+
+  - alert: IncusWarningsPresent
+    expr: incus_warnings{severity!="low"} > 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Incus on {{ $labels.instance }} has {{ $value }} active {{ $labels.severity }} severity warnings'
+
+  # AMD GPU Temperature Monitoring
+  - alert: AmdgpuEdgeTemperatureHigh
+    expr: amdgpu_temperature_celsius{sensor="edge"} > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) edge temperature is {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuEdgeTemperatureCritical
+    expr: amdgpu_temperature_celsius{sensor="edge"} > 100
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) edge temperature is critically high at {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuJunctionTemperatureHigh
+    expr: amdgpu_temperature_celsius{sensor="junction"} > 90
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) junction temperature is {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuJunctionTemperatureCritical
+    expr: amdgpu_temperature_celsius{sensor="junction"} > 105
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) junction temperature is critically high at {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuMemoryTemperatureHigh
+    expr: amdgpu_temperature_celsius{sensor="memory"} > 85
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) memory temperature is {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuMemoryTemperatureCritical
+    expr: amdgpu_temperature_celsius{sensor="memory"} > 100
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      description: 'GPU {{ $labels.name }} ({{ $labels.device }}) memory temperature is critically high at {{ printf "%.0f" $value }}°C on {{ $labels.instance }}'
+
+  - alert: AmdgpuMetricsStale
+    expr: (time() - node_textfile_mtime_seconds{file="amdgpu.prom"}) > 120
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'AMD GPU metrics collector on {{ $labels.instance }} has not updated for over 2 minutes'
+
+  - alert: IncusScrapeDown
+    expr: up{job="incus"} == 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Incus metrics scrape for {{ $labels.instance }} has been down for 5 minutes'

@@ -4,35 +4,35 @@
   unstablePkgs,
   lib,
   inputs,
-  hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in {
   config = {
-    system.primaryUser = variables.primaryUser;
-    users.users.${variables.primaryUser}.home = "/Users/${variables.primaryUser}";
+    system.primaryUser = hostSpec.primaryUser;
+    users.users.${hostSpec.primaryUser}.home = "/Users/${hostSpec.primaryUser}";
     ids.gids.nixbld = 30000;
 
     # These are packages are just for darwin systems
     environment.systemPackages = with pkgs; [
+      dolt
       kind
-      esphome
+      # esphome  # disabled: depends on bleak which is Linux-only
       esptool
       # Node and friends
       nodejs_22
       yarn-berry
       webpack-cli
       pnpm_10
+      # Java
+      jdk21
     ];
 
     nixpkgs.config.allowUnfree = true;
     nixpkgs.config.overlays = [
       (final: prev:
-        lib.optionalAttrs (prev.stdenv.system == "aarch64-darwin") {
+        lib.optionalAttrs (prev.stdenv.hostPlatform.system == "aarch64-darwin") {
           # Add access to x86 packages system is running Apple Silicon
           pkgs-x86 = import nixpkgs {
             system = "x86_64-darwin";
@@ -133,7 +133,7 @@ in {
         "zoom"
       ];
       masApps = {
-        # "Amphetamine" = 937984704;
+        "Amphetamine" = 937984704;
         # "Blackmagic Disk Speed Test" = 425264550;
         # "CleanMyMac" = 1339170533;
         # "GarageBand" = 682658836;
@@ -142,10 +142,10 @@ in {
         # "MultiVNC" = 6738012997;
         # "Numbers" = 409203825;
         # "Pages" = 409201541;
-        # "Tailscale" = 1475387142;
-        # "WiFi Explorer Lite" = 1408727408;
+        "Tailscale" = 1475387142;
+        "WiFi Explorer Lite" = 1408727408;
         # "Windows App" = 1295203466;
-        # "Xcode" = 497799835;
+        "Xcode" = 497799835;
       };
     };
 

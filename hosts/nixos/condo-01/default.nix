@@ -10,11 +10,9 @@
   lib,
   unstablePkgs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -25,25 +23,34 @@ in {
 
   services.clubcotton = {
     alloy-logs.enable = true;
-    alloy-logs.lokiEndpoint = "http://loki.bobtail-clownfish.ts.net/loki/api/v1/push";
+    alloy-logs.lokiEndpoint = "https://loki.bobtail-clownfish.ts.net/loki/api/v1/push";
     tailscale.enable = true;
-  };
 
-  clubcotton.zfs_single_root.enable = true;
-  virtualisation.podman.enable = true;
-  virtualisation.libvirtd = {
-    enable = true;
-    qemu = {
-      package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      healthChecks = {
+        services = ["sshd" "tailscaled"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+        # Remote host — not on the 192.168.5.0/24 LAN, so the default gateway ping target doesn't apply.
+        pingTargets = [];
       };
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
-  services.openssh.enable = variables.opensshEnable;
+  clubcotton.zfs_single_root.enable = true;
+
+  # Suppress WARN-level smartctl exporter noise: /dev/sda has 1 stale historical
+  # error in its SMART log (from 8400+ hours ago), causing ~960 false warnings/day.
+  # Disk is healthy (0 reallocated sectors, 0 read errors, PASSED self-test).
+  services.prometheus.exporters.smartctl.extraFlags = ["--log.level=error"];
+  virtualisation.podman.enable = true;
+
+  programs.zsh.enable = hostSpec.zshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
   services.clubcotton.tailscale = {
     useRoutingFeatures = "server";
@@ -74,10 +81,11 @@ in {
   };
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = "condo-01";
-    defaultGateway = "192.168.12.1";
-    nameservers = ["192.168.12.1"];
+    # defaultGateway is supplied by DHCP on br0.
+    # Setting it statically races network-setup against dhcpcd during
+    # nixos-rebuild test → "Nexthop has invalid gateway" (forgejo #299).
     useDHCP = false;
     bridges."br0".interfaces = ["eno1"];
     interfaces."br0".useDHCP = true;
@@ -87,8 +95,23 @@ in {
     #    prefixLength = 24;
     #  }
     #];
+
+    # Static nameservers to fix forgejo #332: tailscaled was losing its
+    # DHCP-supplied upstream resolvers around 03:00 MDT (DHCP lease event
+    # coinciding with auto-upgrade), causing 4 days of consecutive failures
+    # with `dns: resolver: forward: no upstream resolvers set, returning
+    # SERVFAIL` for cache.nixos.org / github.com.
+    #
+    # tailscaled forwards non-MagicDNS queries to whatever upstream resolvers
+    # it learned from /etc/resolv.conf, so pinning resolv.conf to stable
+    # public + LAN resolvers ensures the upstream set is never empty.
+    nameservers = ["1.1.1.1" "9.9.9.9" "192.168.12.1"];
+    # Prevent dhcpcd from overwriting our static nameservers when leases renew.
+    dhcpcd.extraConfig = ''
+      nohook resolv.conf
+    '';
   };
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.pipewire = {
     enable = true;
@@ -136,10 +159,9 @@ in {
   # services.xserver.libinput.enable = true;
 
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [8096 8112];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

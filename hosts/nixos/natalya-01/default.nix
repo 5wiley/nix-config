@@ -10,11 +10,9 @@
   lib,
   unstablePkgs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -25,8 +23,22 @@ in {
 
   services.clubcotton = {
     alloy-logs.enable = true;
-    alloy-logs.lokiEndpoint = "http://loki.bobtail-clownfish.ts.net/loki/api/v1/push";
+    alloy-logs.lokiEndpoint = "https://loki.bobtail-clownfish.ts.net/loki/api/v1/push";
     tailscale.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      healthChecks = {
+        services = ["sshd" "tailscaled"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+        # Remote host — not on the 192.168.5.0/24 LAN, so the default gateway ping target doesn't apply.
+        pingTargets = [];
+      };
+    };
   };
 
   clubcotton.zfs_single_root.enable = true;
@@ -35,15 +47,11 @@ in {
     enable = true;
     qemu = {
       package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
-      };
     };
   };
 
-  programs.zsh.enable = variables.zshEnable;
-  services.openssh.enable = variables.opensshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
   services.clubcotton.tailscale = {
     useRoutingFeatures = "server";
@@ -74,10 +82,11 @@ in {
   };
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = "natalya-01";
-    defaultGateway = "10.0.0.1";
-    nameservers = ["10.0.0.1"];
+    # defaultGateway and nameservers supplied by DHCP on br0.
+    # Setting them statically races network-setup against dhcpcd during
+    # nixos-rebuild test → "Nexthop has invalid gateway" (forgejo #299).
     useDHCP = false;
     bridges."br0".interfaces = ["eno1"];
     interfaces."br0".useDHCP = true;
@@ -88,7 +97,7 @@ in {
     #  }
     #];
   };
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.pipewire = {
     enable = true;
@@ -136,10 +145,9 @@ in {
   # services.xserver.libinput.enable = true;
 
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [8096 8112];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

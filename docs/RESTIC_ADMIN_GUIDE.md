@@ -67,7 +67,8 @@ export RESTIC_PASSWORD_FILE="/run/agenix/restic-password"
 # For B2
 export RESTIC_REPOSITORY="b2:nas-01-restic-backup"
 export RESTIC_PASSWORD_FILE="/run/agenix/restic-password"
-source /run/agenix/restic-b2-env
+# The env file uses KEY=value format without `export`, so wrap with `set -a`
+set -a; source /run/agenix/restic-b2-env; set +a
 ```
 
 ### List snapshots

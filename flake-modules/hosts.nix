@@ -5,6 +5,7 @@
 }: {
   flake = let
     inherit (inputs) nixpkgs nixpkgs-unstable home-manager agenix nix-darwin disko disko-zfs tsnsrv vscode-server nixos-generators nix-builder-config musnix;
+    inherit (nixpkgs) lib;
 
     # Package set generators
     genPkgs = system:
@@ -17,6 +18,23 @@
       import nixpkgs-unstable {
         inherit system;
         config.allowUnfree = true;
+        overlays = [
+          # Re-add pgvector to open-webui — moved to optional-dependencies
+          # in 0.9.1, breaks pgvector vector_db backend. See issue #327.
+          ((import ../overlays/open-webui.nix) {
+            config = {};
+            pkgs = null;
+            lib = nixpkgs-unstable.lib;
+            unstablePkgs = null;
+          })
+          # mise pinned to 2026.5.18 (nixpkgs-unstable at 2026.5.12 as of 2026-05-20)
+          ((import ../overlays/mise.nix) {
+            config = {};
+            pkgs = null;
+            lib = nixpkgs-unstable.lib;
+            unstablePkgs = null;
+          })
+        ];
       };
 
     # Common module builders
@@ -46,6 +64,16 @@
         localPackages = self.legacyPackages.${system}.localPackages;
         workmuxPackage = inputs.workmux.packages.${system}.default;
         crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
+        worktrunkPackage = inputs.worktrunk.packages.${system}.default;
+        qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
+          buildPhase = ''
+            export HOME=$(mktemp -d)
+            bun install
+          '';
+        });
+        gwsPackage = inputs.gws.packages.${system}.gws;
+        fjPackage = inputs.fj.packages.${system}.fj;
+        devenvPackage = inputs.devenv.packages.${system}.devenv;
       };
     };
 
@@ -73,111 +101,183 @@
       ../modules/postgresql
       ../modules/tailscale
       ../modules/zfs
+      ../modules/auto-upgrade
     ];
 
-    # Load host variables for enriching specs
-    commonLib = import ../hosts/common/lib.nix;
+    # Default host settings — per-host specs override these
+    # Only include values that differ from defaults in individual host specs
+    hostDefaults = {
+      shouldScrapeMetrics = true;
+      botHosts = ["nix-01" "nix-02" "nix-03"];
+      stateVersion = null; # Must be overridden per host
+      hostId = null; # Required for ZFS hosts
+      useDHCP = false;
+      timeZone = "America/Denver";
+      zshEnable = true;
+      opensshEnable = true;
+      firewallEnable = true;
+      tailscaleEnable = true;
+      linuxBuilderEnable = false;
+      desktopPackages = false;
+      determinateNix = false;
+    };
 
     # NixOS host specifications - single source of truth for all NixOS hosts
     # Adding a host here automatically includes it in nixosConfigurations, SSH RemoteForward,
     # and the homepage dashboard (if ip is specified and shouldMonitor is true)
     #
-    # Homepage/Glances fields (optional):
+    # Required fields:
+    #   system      - Architecture (e.g., "x86_64-linux")
+    #   usernames   - List of user accounts to create
+    #   stateVersion - NixOS version when host was first installed
+    #
+    # Optional fields:
     #   ip          - IP address for Glances monitoring (enables Glances and adds to homepage)
     #   displayName - Name shown on homepage (defaults to hostname)
     #   glancesPort - Port for Glances (defaults to 61208)
     #   icon        - Icon for homepage (defaults to "mdi-server")
+    #   hostId      - ZFS host ID (required for ZFS hosts)
+    #   desktopPackages - Include heavy desktop/media packages (default: false)
     #
     # Auto-derived fields:
-    #   shouldMonitor - From host variables shouldScrapeMetrics (controls homepage/Glances inclusion)
+    #   shouldMonitor - From shouldScrapeMetrics (controls homepage/Glances inclusion)
+    #
+    # All other fields from hostDefaults can be overridden per-host.
     nixosHostSpecs =
       builtins.mapAttrs (
-        name: spec:
-          spec
+        name: spec: let
+          merged = hostDefaults // spec;
+        in
+          merged
           // {
-            shouldMonitor = (commonLib.getHostVariables name).shouldScrapeMetrics or true;
+            shouldMonitor = merged.shouldScrapeMetrics;
           }
       ) {
         admin = {
           system = "x86_64-linux";
           usernames = ["bcotton"];
+          stateVersion = "23.11";
           ip = "192.168.5.98";
           displayName = "Admin";
         };
         condo-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton"];
+          stateVersion = "24.11";
+          hostId = "3fa4e0cb";
           # No IP - different network, not on homepage
         };
         natalya-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton"];
+          stateVersion = "24.11";
+          hostId = "8fb0eda8";
           # No IP - different network, not on homepage
         };
         nas-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
+          stateVersion = "24.11";
+          hostId = "007f0200";
           ip = "192.168.5.42";
           displayName = "NAS-01";
+          desktopPackages = true;
         };
         nix-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
+          stateVersion = "23.11";
+          hostId = "85c6dbc0";
           ip = "192.168.5.210";
           displayName = "Nix-01";
+          desktopPackages = true;
         };
         nix-02 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
+          stateVersion = "23.11";
+          hostId = "038f8559";
           ip = "192.168.5.212";
           displayName = "Nix-02";
+          desktopPackages = true;
         };
         nix-03 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton" "larry" "natalya"];
+          stateVersion = "23.11";
+          hostId = "007f0200";
           ip = "192.168.5.214";
           displayName = "Nix-03";
+          desktopPackages = true;
         };
         nix-04 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
+          stateVersion = "24.11";
+          hostId = "3fa4e0cb";
           ip = "192.168.5.54";
           displayName = "Nix-04";
+          desktopPackages = true;
+          shouldScrapeMetrics = false;
         };
         imac-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
+          stateVersion = "24.11";
+          hostId = "238f8e1e";
           ip = "192.168.5.125";
           displayName = "iMac-01";
+          desktopPackages = true;
         };
         imac-02 = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
+          stateVersion = "24.11";
+          hostId = "95c41ddc";
           ip = "192.168.5.153";
           displayName = "iMac-02";
+          desktopPackages = true;
         };
         dns-01 = {
           system = "x86_64-linux";
           usernames = ["bcotton"];
+          stateVersion = "23.11";
           ip = "192.168.5.220";
           displayName = "DNS-01";
         };
         octoprint = {
           system = "x86_64-linux";
           usernames = ["bcotton" "tomcotton"];
+          stateVersion = "23.11";
           ip = "192.168.5.49";
           displayName = "OctoPrint";
         };
         frigate-host = {
           system = "x86_64-linux";
           usernames = ["bcotton"];
+          stateVersion = "23.11";
           ip = "192.168.20.174";
           displayName = "Frigate";
         };
         nixbook-test = {
           system = "x86_64-linux";
           usernames = ["tomcotton"];
+          shouldScrapeMetrics = false;
           # No IP - laptop with DHCP, not on homepage
+        };
+        incus-testing = {
+          system = "x86_64-linux";
+          usernames = ["bcotton"];
+          stateVersion = "25.05";
+          shouldScrapeMetrics = false;
+          # No IP - Incus VM with DHCP, external access via Tailscale
+        };
+        freshrss = {
+          system = "x86_64-linux";
+          usernames = ["bcotton"];
+          stateVersion = "25.05";
+          shouldScrapeMetrics = false;
+          # No IP - Incus container with DHCP, accessed via Tailscale/tsnsrv
         };
       };
 
@@ -211,6 +311,7 @@
       "forgejo"
       "atuin"
       "open-webui"
+      "hermes"
       "harmonia"
     ];
 
@@ -223,7 +324,7 @@
         category = "Monitoring";
         icon = "grafana.svg";
         description = "Metrics dashboards";
-        href = "http://admin:3000";
+        href = "https://grafana.bobtail-clownfish.ts.net";
       };
       prometheus = {
         name = "Prometheus";
@@ -231,6 +332,28 @@
         icon = "prometheus.svg";
         description = "Metrics collection";
         href = "http://admin:9001";
+        widget = {
+          type = "prometheus";
+          url = "http://admin:9001";
+        };
+      };
+      alertmanager = {
+        name = "Alertmanager";
+        category = "Monitoring";
+        icon = "prometheus.svg";
+        description = "Alert routing & silencing";
+        href = "http://admin:9093";
+        widget = {
+          type = "customapi";
+          url = "http://admin:9001/api/v1/query?query=count(ALERTS{alertstate=%22firing%22,alertname!=%22Watchdog%22})%20or%20vector(0)";
+          mappings = [
+            {
+              field = "data.result.0.value.1";
+              label = "Firing Alerts";
+              format = "number";
+            }
+          ];
+        };
       };
       # Multi-instance services (readarr uses instances, not standard options)
       readarr-epub = {
@@ -255,15 +378,22 @@
         description = "DNS & DHCP server";
         href = "http://dns-01:5380";
       };
+      frigate = {
+        name = "Frigate";
+        category = "Smart Home";
+        icon = "frigate.svg";
+        description = "NVR & object detection";
+        href = "http://frigate-host:5000";
+      };
     };
 
     # NixOS system builder (consolidated from nixosSystem and nixosMinimalSystem)
     nixosSystem = {
-      system,
       hostName,
-      usernames,
+      hostSpec, # Merged hostDefaults // per-host spec
       minimal ? false, # Toggle for minimal vs full
     }: let
+      inherit (hostSpec) system usernames;
       pkgs = genPkgs system;
       unstablePkgs = genUnstablePkgs system;
 
@@ -289,19 +419,19 @@
         ++ [
           ../hosts/common/common-packages.nix
           ../hosts/common/nixos-common.nix
-          # Enable tailscale from variables
-          ({hostName, ...}: let
-            commonLib = import ../hosts/common/lib.nix;
-            variables = commonLib.getHostVariables hostName;
-          in {
-            services.clubcotton.tailscale.enable = variables.tailscaleEnable;
-          })
+        ]
+        ++ (
+          if hostSpec.desktopPackages
+          then [../hosts/common/nixos-desktop-packages.nix]
+          else []
+        )
+        ++ [
+          # Enable tailscale from hostSpec
+          {services.clubcotton.tailscale.enable = hostSpec.tailscaleEnable;}
           # Auto-enable Glances on hosts with an IP and monitoring enabled
-          ({hostName, ...}: let
-            hostSpec = nixosHostSpecs.${hostName} or {};
+          (let
             hasIp = hostSpec.ip or null != null;
-            shouldMonitor = hostSpec.shouldMonitor or true;
-            enableGlances = hasIp && shouldMonitor;
+            enableGlances = hasIp && hostSpec.shouldMonitor;
           in {
             services.glances.enable = enableGlances;
             services.glances.openFirewall = enableGlances;
@@ -312,12 +442,12 @@
       userModules = [../users/groups.nix] ++ map (username: ../users/${username}.nix) usernames;
     in
       nixpkgs.lib.nixosSystem {
-        inherit system;
         specialArgs = {
-          inherit self system inputs hostName nixosHostSpecs homepageServiceList homepageManualServices;
+          inherit self system inputs hostName hostSpec nixosHostSpecs homepageServiceList homepageManualServices;
         };
         modules =
-          commonModules
+          [{nixpkgs.hostPlatform = system;}]
+          ++ commonModules
           ++ (
             if minimal
             then []
@@ -331,45 +461,65 @@
       system,
       hostName,
       username,
+      determinateNix ? false,
     }: let
       pkgs = genPkgs system;
       unstablePkgs = genUnstablePkgs system;
+      hostSpec =
+        hostDefaults
+        // {
+          primaryUser = username;
+          inherit determinateNix;
+        };
     in
       nix-darwin.lib.darwinSystem {
         inherit system;
         specialArgs = {
-          inherit self system inputs hostName;
+          inherit self system inputs hostName hostSpec;
         };
-        modules = [
-          (mkModuleArgs unstablePkgs system)
-          ../overlays.nix
-          inputs.home-manager.darwinModules.home-manager
-          nix-builder-config.darwinModules.client
-          ../hosts/darwin/${hostName}
-          {
-            networking.hostName = hostName;
+        modules =
+          [
+            (mkModuleArgs unstablePkgs system)
+            ../overlays.nix
+            inputs.home-manager.darwinModules.home-manager
+          ]
+          # nix-builder-config sets nix.settings.substituters which conflicts with nix.enable = false
+          ++ lib.optionals (!determinateNix) [
+            nix-builder-config.darwinModules.client
+            {services.nix-builder.client.enable = true;}
+          ]
+          ++ [
+            ../hosts/darwin/${hostName}
+            {
+              networking.hostName = hostName;
 
-            # Enable nix cache client on all Darwin systems
-            # Settings come from nix-builder-config flake defaults
-            services.nix-builder.client.enable = true;
-
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.${username}.imports = [
-              ../home/${username}.nix
-              inputs.workmux.homeManagerModules.default
-            ];
-            home-manager.extraSpecialArgs = {
-              inherit inputs unstablePkgs hostName nixosHosts;
-              localPackages = self.legacyPackages.${system}.localPackages;
-              workmuxPackage = inputs.workmux.packages.${system}.default;
-              crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
-            };
-          }
-          ../hosts/common/common-packages.nix
-          ../hosts/common/darwin-common.nix
-          ../users/${username}.nix
-        ];
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.${username}.imports = [
+                ../home/${username}.nix
+                inputs.workmux.homeManagerModules.default
+              ];
+              home-manager.extraSpecialArgs = {
+                inherit inputs unstablePkgs hostName nixosHosts;
+                localPackages = self.legacyPackages.${system}.localPackages;
+                workmuxPackage = inputs.workmux.packages.${system}.default;
+                crushPackage = inputs.nix-ai-tools.packages.${system}.crush;
+                worktrunkPackage = inputs.worktrunk.packages.${system}.default;
+                qmdPackage = inputs.qmd.packages.${system}.default.overrideAttrs (old: {
+                  buildPhase = ''
+                    export HOME=$(mktemp -d)
+                    bun install
+                  '';
+                });
+                gwsPackage = inputs.gws.packages.${system}.gws;
+                fjPackage = inputs.fj.packages.${system}.fj;
+                devenvPackage = inputs.devenv.packages.${system}.devenv;
+              };
+            }
+            ../hosts/common/common-packages.nix
+            ../hosts/common/darwin-common.nix
+            ../users/${username}.nix
+          ];
       };
   in {
     # Darwin configurations
@@ -394,17 +544,25 @@
         hostName = "bobs-imac";
         username = "bcotton";
       };
+      bobs-work-laptop = darwinSystem {
+        system = "aarch64-darwin";
+        hostName = "bobs-work-laptop";
+        username = "bcotton";
+        determinateNix = true;
+      };
     };
 
     # NixOS configurations - generated from nixosHostSpecs
     nixosConfigurations =
       builtins.mapAttrs (
-        hostName: spec:
+        hostName: hostSpec:
           nixosSystem {
-            inherit hostName;
-            inherit (spec) system usernames;
+            inherit hostName hostSpec;
           }
       )
       nixosHostSpecs;
+
+    # Expose host specs for CLI tooling (nix eval .#nixosHostSpecs)
+    inherit nixosHostSpecs;
   };
 }

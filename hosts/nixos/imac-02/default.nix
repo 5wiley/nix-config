@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -28,10 +26,29 @@ in {
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
+  # Only monitor the ZFS root NVMe disk, skip auto-discovery which picks up
+  # /dev/nvme0 (controller node, permission denied)
+  services.prometheus.exporters.smartctl.devices = [
+    "/dev/disk/by-id/nvme-Samsung_SSD_970_EVO_Plus_2TB_S59CNM0R836896T"
+  ];
+
   services.clubcotton = {
     alloy-logs.enable = true;
     scanner.enable = true;
     tailscale.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled" "display-manager"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+      };
+    };
   };
 
   virtualisation.containers.enable = true;
@@ -41,16 +58,6 @@ in {
     dockerSocket.enable = true;
     # Required for containers under podman-compose to be able to talk to each other.
     defaultNetwork.settings.dns_enabled = true;
-  };
-  virtualisation.libvirtd = {
-    enable = true;
-    qemu = {
-      package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
-      };
-    };
   };
 
   clubcotton.zfs_single_root = {
@@ -68,7 +75,7 @@ in {
 
   networking = {
     hostName = "imac-02";
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
 
     useDHCP = false;
     defaultGateway = "192.168.5.1";
@@ -82,23 +89,23 @@ in {
   };
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
   environment.systemPackages = with pkgs; [
     firefox
     code-cursor
   ];
 
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

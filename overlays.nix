@@ -13,6 +13,33 @@
       bird = prev.bird2;
     })
 
+    # direnv 2.37.1 has broken fish tests in nixpkgs - skip checks until fixed upstream
+    (final: prev: {
+      direnv = prev.direnv.overrideAttrs (old: {
+        doCheck = false;
+      });
+    })
+
+    # jetbrains-mono build-from-source fails on darwin (ffmpeg-python test crash)
+    # Use pre-built fonts from GitHub release instead
+    (final: prev: {
+      jetbrains-mono = prev.jetbrains-mono.overrideAttrs (old: {
+        nativeBuildInputs = [];
+        buildPhase = ''
+          runHook preBuild
+          runHook postBuild
+        '';
+        installPhase = ''
+          runHook preInstall
+          install -Dm644 -t "$out/share/fonts/opentype/" fonts/otf/*.otf
+          install -Dm644 -t "$out/share/fonts/truetype/" fonts/ttf/*.ttf
+          install -Dm644 -t "$out/share/fonts/truetype/" fonts/variable/*.ttf
+          install -Dm644 -t "$out/share/fonts/WOFF2/" fonts/webfonts/*.woff2
+          runHook postInstall
+        '';
+      });
+    })
+
     # nix-openclaw overlay - provides pkgs.moltbot
     inputs.nix-openclaw.overlays.default
 
@@ -22,23 +49,29 @@
         # Core tools that should always be available
         ((import ./overlays/qmk.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/claude-code.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        # mise pinned to 2026.5.18 (nixpkgs at 2026.5.12 as of 2026-05-20)
+        ((import ./overlays/mise.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        ((import ./overlays/psycopg.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         ((import ./overlays/llm.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        # tmux pinned to master for copy-mode crash fix (issue #4777)
+        ((import ./overlays/tmux.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         # tmux-fingers with stdin close fix (PR pending upstream)
         ((import ./overlays/tmux-fingers.nix {inherit config pkgs lib unstablePkgs;}) final prev)
+        # Dolt version-controlled database pinned to v1.84.0
+        ((import ./overlays/dolt.nix {inherit config pkgs lib unstablePkgs;}) final prev)
 
         # Beets is only available on Linux due to gst-python build issues on Darwin
         (lib.optionalAttrs prev.stdenv.isLinux
           ((import ./overlays/beets.nix {inherit config pkgs lib unstablePkgs;}) final prev))
 
         # Conditional overlays based on service/module usage
-        (lib.optionalAttrs (config.services.jellyfin.enable or false)
-          ((import ./overlays/jellyfin.nix {inherit config pkgs lib unstablePkgs;}) final prev))
-
         (lib.optionalAttrs (config.boot.supportedFilesystems.zfs or false)
           ((import ./overlays/smart-disk-monitoring.nix {inherit config pkgs lib unstablePkgs;}) final prev))
 
-        (lib.optionalAttrs ((config.programs.git.enable or false) && (config.programs.git.delta.enable or false))
+        (lib.optionalAttrs ((config.programs.git.enable or false) && (config.programs.delta.enable or false))
           ((import ./overlays/delta.nix {inherit config pkgs lib unstablePkgs;}) final prev))
+
+        # Grafana overlay removed - nixpkgs 25.11 already has grafana 12.3.2
       ])
   ];
 }

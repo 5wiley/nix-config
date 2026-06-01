@@ -102,6 +102,14 @@ in {
         "${cfg.dataDir}/images:/var/www/wallabag/web/assets/images"
       ];
       ports = ["${toString cfg.port}:80"];
+      podman.sdnotify = "healthy";
+      extraOptions = [
+        "--health-cmd=curl -fsS http://localhost:80/ || exit 1"
+        "--health-interval=30s"
+        "--health-timeout=5s"
+        "--health-retries=3"
+        "--health-start-period=60s"
+      ];
     };
 
     systemd.tmpfiles.rules = [

@@ -3,14 +3,13 @@
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 {
   config,
+  lib,
   pkgs,
   unstablePkgs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -27,14 +26,50 @@ in {
     group = "technitium";
   };
 
-  # Ensure that nix can get to the cache server
-  networking.extraHosts = ''
-    192.168.5.42 nas-01
-  '';
+  # Re-enable resolved for Tailscale D-Bus split-DNS integration, but disable
+  # the stub listener that conflicts with Technitium's 0.0.0.0:53 TCP bind.
+  # (See PR #93 / issue #86 for the original port-53 conflict.)
+  services.resolved = {
+    enable = true;
+    extraConfig = "DNSStubListener=no";
+  };
+
+  # With the stub listener disabled, the default stub-resolv.conf
+  # (nameserver 127.0.0.53) has nothing behind it. Point resolv.conf at
+  # Technitium directly — it handles .lan authoritatively and forwards
+  # .ts.net to MagicDNS via a conditional forwarder zone (see below).
+  environment.etc."resolv.conf" = lib.mkForce {
+    mode = "0644";
+    text = ''
+      nameserver 127.0.0.1
+      search lan bobtail-clownfish.ts.net
+    '';
+  };
 
   services.clubcotton = {
     alloy-logs.enable = true;
     nut-client.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      # Upgrade last — dns-01 is the fleet DNS server, so all other hosts
+      # (03:00 + 15min jitter, nas-01 at 03:30) must finish before this runs.
+      dates = "04:00";
+      randomizedDelaySec = "0";
+      garbageCollect.olderThan = "3d";
+      healthChecks = {
+        pingTargets = ["192.168.5.1"];
+        services = ["sshd"];
+        tcpPorts = [
+          {port = 22;}
+          {
+            host = "192.168.5.220";
+            port = 53;
+          }
+        ];
+      };
+    };
 
     # Technitium DNS Server
     technitium = {
@@ -45,6 +80,15 @@ in {
 
       dnsListenAddresses = ["0.0.0.0"];
       forwarders = ["1.1.1.1" "8.8.4.4"];
+
+      # Forward Tailscale MagicDNS domains to the Tailscale resolver so that
+      # Go programs (Alloy, etc.) using resolv.conf can resolve .ts.net names.
+      conditionalForwarders = [
+        {
+          zone = "bobtail-clownfish.ts.net";
+          forwarder = "100.100.100.100";
+        }
+      ];
 
       # Enable ad blocking
       enableBlocking = true;
@@ -106,9 +150,9 @@ in {
           }
           {
             scope = "main";
-            macAddress = "00:50:56:01:32:22";
+            macAddress = "00:16:3e:3d:95:f2";
             ipAddress = "192.168.5.20";
-            hostName = "homeassistant-new";
+            hostName = "prod-homeassistant";
           }
           {
             scope = "main";
@@ -241,6 +285,12 @@ in {
           {
             scope = "vlan20";
             macAddress = "E4:5F:01:40:8D:61";
+            ipAddress = "192.168.20.19";
+            hostName = "homeassistant-old";
+          }
+          {
+            scope = "vlan20";
+            macAddress = "00:16:3e:3d:95:f2";
             ipAddress = "192.168.20.20";
             hostName = "homeassistant";
           }
@@ -330,10 +380,18 @@ in {
           }
           {
             scope = "vlan20";
-            macAddress = "D2:21:F9:29:F6:B5";
-            ipAddress = "192.168.20.199";
-            hostName = "esp-keyboard-wake";
+            macAddress = "10:20:BA:5D:34:40";
+            ipAddress = "192.168.20.148";
+            hostName = "new-thermostat";
           }
+          {
+            scope = "vlan20";
+            macAddress = "9C:9C:1F:8A:DF:41";
+            ipAddress = "192.168.20.136";
+            hostName = "swamp-cooler";
+          }
+          # esp-keyboard-wake removed: duplicate MAC D2:21:F9:29:F6:B5 (same as plant-monitor)
+          # Re-add with correct MAC when known
         ];
       };
 
@@ -433,6 +491,12 @@ in {
               ipAddress = "192.168.5.220";
               createPtrRecord = true;
             }
+            {
+              name = "prod-homeassistant";
+              type = "A";
+              ipAddress = "192.168.5.20";
+              createPtrRecord = true;
+            }
 
             # VLAN 20 hosts
             {
@@ -474,6 +538,18 @@ in {
               createPtrRecord = true;
               aliases = ["frigate"];
             }
+            {
+              name = "new-thermostat";
+              type = "A";
+              ipAddress = "192.168.20.148";
+              createPtrRecord = true;
+            }
+            {
+              name = "swamp-cooler";
+              type = "A";
+              ipAddress = "192.168.20.136";
+              createPtrRecord = true;
+            }
           ];
         }
       ];
@@ -482,6 +558,7 @@ in {
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = "dns-01";
@@ -515,7 +592,7 @@ in {
   # networking.networkmanager.enable = true;  # Easiest to use and most distros use this bzy default.
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
@@ -546,7 +623,7 @@ in {
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
@@ -580,13 +657,13 @@ in {
   # List services that you want to enable:
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
@@ -609,5 +686,5 @@ in {
   # and migrated your data accordingly.
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

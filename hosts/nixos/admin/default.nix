@@ -8,11 +8,9 @@
   unstablePkgs,
   inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   # How to write modules to be imported here
@@ -39,6 +37,23 @@ in {
     nut-client.enable = true;
     tailscale.enable = true;
     homepage.enable = true;
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      garbageCollect.olderThan = "3d";
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled"];
+        tcpPorts = [
+          {port = 22;}
+          {port = 9001;} # prometheus
+          {port = 9093;} # alertmanager
+          {port = 3493;} # upsd (NUT server)
+        ];
+      };
+    };
   };
 
   # Configure homepage dashboard
@@ -93,7 +108,7 @@ in {
   };
 
   boot.loader.systemd-boot.enable = true;
-  boot.loader.systemd-boot.configurationLimit = 20;
+  boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.systemd-boot.memtest86.enable = true;
   boot.loader.systemd-boot.netbootxyz.enable = true;
 
@@ -121,7 +136,7 @@ in {
   ];
 
   # Set your time zone.
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
   services.rpcbind.enable = true; # needed for NFS
   systemd.mounts = [
@@ -186,21 +201,21 @@ in {
   # Setup for docker
   virtualisation.docker.enable = true;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
   # List services that you want to enable:
-  services.openssh.enable = variables.opensshEnable;
+  services.openssh.enable = hostSpec.opensshEnable;
   services.nfs.server.enable = true;
 
   # See https://xeiaso.net/blog/prometheus-grafana-loki-nixos-2020-11-20/
   # Turn on node_exporter
   services.prometheus = {
-    # Exclude webdav service from blackbox monitoring
-    tsnsrvExcludeList = ["webdav" "loki"];
+    # Exclude services from auto-generated root-path blackbox probes (custom paths added manually)
+    tsnsrvExcludeList = ["webdav" "loki" "tempo" "honcho"];
 
     exporters = {
     };
@@ -210,7 +225,7 @@ in {
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
-  networking.firewall.enable = variables.firewallEnable;
+  networking.firewall.enable = hostSpec.firewallEnable;
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
@@ -233,5 +248,5 @@ in {
   # and migrated your data accordingly.
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = variables.stateVersion;
+  system.stateVersion = hostSpec.stateVersion;
 }

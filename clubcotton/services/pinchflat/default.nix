@@ -79,7 +79,13 @@ in {
 
   config = mkIf cfg.enable {
     virtualisation.oci-containers.containers.${service} = {
-      image = "ghcr.io/kieraneglin/pinchflat:latest";
+      # The `:latest` tag has not been updated since before v2025.9.26,
+      # which added Deno to the image so yt-dlp's EJS-based YouTube
+      # extractor (now the default) has a JS runtime. Without it,
+      # downloads fail with "No supported JavaScript runtime could be
+      # found" (see issue #370). Upstream is on a development pause,
+      # so `:dev` is currently the only published tag that ships Deno.
+      image = "ghcr.io/kieraneglin/pinchflat:dev";
       autoStart = true;
       user = "${toString config.users.users.${cfg.user}.uid}:${toString config.users.groups.${cfg.group}.gid}";
       volumes = [

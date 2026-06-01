@@ -1,3 +1,0 @@
-{
-  shouldScrapeMetrics = false;
-}

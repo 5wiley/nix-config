@@ -6,12 +6,11 @@
   pkgs,
   lib,
   unstablePkgs,
+  inputs,
   hostName,
+  hostSpec,
   ...
 }: let
-  # Get merged variables (defaults + host overrides)
-  commonLib = import ../../common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
   keys = import ../../common/keys.nix;
 in {
   imports = [
@@ -20,13 +19,20 @@ in {
     ../../../modules/node-exporter
     ../../../modules/nfs
     # nix-builder client is enabled via flake-modules/hosts.nix
+    inputs.nix-builder-config.nixosModules.coordinator
+    inputs.nix-builder-config.nixosModules.cache-pusher
     ../../../modules/incus
     ../../../modules/systemd-network
+  ];
+
+  environment.systemPackages = with pkgs; [
+    dolt
   ];
 
   services.clubcotton = {
     alloy-logs = {
       enable = true;
+      otelReceiver.enable = true;
       fileTargets = [
         {
           job = "openclaw";
@@ -38,6 +44,25 @@ in {
     tailscale.enable = true;
     nut-client.enable = true;
     hyprland.enable = true;
+    hermes = {
+      enable = true;
+      forgejoIssueWebhook.enable = true;
+      forgejoCiFailureWebhook.enable = true;
+      alertmanagerWebhook.enable = true;
+    };
+
+    auto-upgrade = {
+      enable = true;
+      flake = "git+https://forgejo.bobtail-clownfish.ts.net/bcotton/nix-config?ref=main";
+      dates = "03:00";
+      healthChecks = {
+        pingTargets = ["192.168.5.1" "192.168.5.220"];
+        services = ["sshd" "tailscaled"];
+        tcpPorts = [
+          {port = 22;}
+        ];
+      };
+    };
     forgejo-runner = {
       enable = true;
       instances = {
@@ -76,12 +101,36 @@ in {
 
   nix.settings.trusted-users = ["nix-builder"];
 
+  # Worker role: accept distributed builds but do NOT redelegate.
+  # nix-01 is the sole in-repo coordinator; CI coordinates via its own SSH config.
+  # Empty `builders` prevents the full-mesh cascade deadlock where serving hosts
+  # would recursively delegate to peers. cache-pusher below still pushes locally-
+  # built artifacts to nas-01's Harmonia cache.
+  services.nix-builder.coordinator = {
+    enable = true;
+    sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
+    enableLocalBuilds = true;
+    localCache = null; # nas-01 handles cache signing
+    builders = [];
+  };
+
+  # Raise local build concurrency to actually use this host's CPU when serving
+  # remote build requests (coordinator module caps this at 2 otherwise).
+  nix.settings.max-jobs = lib.mkForce "auto";
+
+  # Push all locally-built paths to the Harmonia cache on nas-01
+  services.nix-builder.cache-pusher = {
+    enable = true;
+    sshKeyPath = config.age.secrets."nix-builder-ssh-key".path;
+  };
+
   virtualisation.containers.enable = true;
 
   virtualisation.podman = {
     enable = true;
     dockerCompat = true;
     dockerSocket.enable = true;
+    autoPrune.enable = true;
     # Required for containers under podman-compose to be able to talk to each other.
     defaultNetwork.settings.dns_enabled = true;
   };
@@ -93,12 +142,10 @@ in {
     disk = "/dev/disk/by-id/nvme-eui.00000000000000000026b738281a43c5";
     useStandardRootFilesystems = true;
     reservedSize = "20GiB";
-    volumes = {
-      "local/incus" = {
-        size = "300G";
-      };
-    };
+    volumes = {};
   };
+
+  boot.zfs.extraPools = ["incus"];
 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
@@ -111,7 +158,7 @@ in {
   systemd.services."user@".serviceConfig.Delegate = "cpu cpuset io memory pids";
 
   networking = {
-    hostId = variables.hostId;
+    hostId = hostSpec.hostId;
     hostName = hostName;
   };
 
@@ -135,23 +182,25 @@ in {
     enable = true;
     qemu = {
       package = pkgs.qemu_kvm;
-      ovmf = {
-        enable = true;
-        packages = [pkgs.OVMFFull.fd];
-      };
     };
   };
 
-  time.timeZone = variables.timeZone;
+  time.timeZone = hostSpec.timeZone;
 
-  programs.zsh.enable = variables.zshEnable;
+  programs.zsh.enable = hostSpec.zshEnable;
 
   users.users.root = {
     openssh.authorizedKeys.keys = keys.rootAuthorizedKeys;
   };
 
-  services.openssh.enable = variables.opensshEnable;
+  services.clubcotton.claude-relay = {
+    enable = true;
+    port = 8788;
+    openFirewall = true;
+  };
+
+  services.openssh.enable = hostSpec.opensshEnable;
   # TODO
-  networking.firewall.enable = variables.firewallEnable;
-  system.stateVersion = variables.stateVersion;
+  networking.firewall.enable = hostSpec.firewallEnable;
+  system.stateVersion = hostSpec.stateVersion;
 }

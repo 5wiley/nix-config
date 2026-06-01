@@ -2,11 +2,10 @@
   config,
   lib,
   hostName,
+  hostSpec,
   ...
 }: let
-  commonLib = import ../hosts/common/lib.nix;
-  variables = commonLib.getHostVariables hostName;
-  isBotHost = builtins.elem hostName (variables.botHosts or []);
+  isBotHost = builtins.elem hostName (hostSpec.botHosts or []);
 in {
   # Generate postgres secrets here: https://supercaracal.github.io/scram-sha-256/
 
@@ -31,16 +30,17 @@ in {
   };
 
   # Conditional secrets based on services
+  # alertmanager uses DynamicUser=true, so the user only exists while the
+  # service is running. We can't chown to it during activation. Use mode
+  # 0444 so the dynamic user can read the files at runtime.
   age.secrets."pushover-key" = lib.mkIf config.services.prometheus.alertmanager.enable {
     file = ./pushover-key.age;
-    owner = "alertmanager";
-    group = "alertmanager";
+    mode = "0444";
   };
 
   age.secrets."pushover-token" = lib.mkIf config.services.prometheus.alertmanager.enable {
     file = ./pushover-token.age;
-    owner = "alertmanager";
-    group = "alertmanager";
+    mode = "0444";
   };
 
   age.secrets."condo-ha-token" = lib.mkIf config.services.prometheus.enable {
@@ -53,6 +53,19 @@ in {
     file = ./homeassistant-token.age;
     owner = "prometheus";
     group = "prometheus";
+  };
+
+  age.secrets."prometheus-incus-cert" = lib.mkIf config.services.prometheus.enable {
+    file = ./prometheus-incus-cert.age;
+    owner = "prometheus";
+    group = "prometheus";
+  };
+
+  age.secrets."prometheus-incus-key" = lib.mkIf config.services.prometheus.enable {
+    file = ./prometheus-incus-key.age;
+    owner = "prometheus";
+    group = "prometheus";
+    mode = "0400";
   };
 
   age.secrets."unpoller" = lib.mkIf config.services.unpoller.enable {
@@ -88,6 +101,32 @@ in {
     file = ./forgejo-runner-token.age;
     owner = "gitea-runner";
     group = "gitea-runner";
+  };
+
+  age.secrets."forgejo-dispatch-token" = lib.mkIf config.services.clubcotton.auto-upgrade.enable {
+    file = ./forgejo-dispatch-token.age;
+  };
+
+  age.secrets."forgejo-hermes-webhook-secret" =
+    lib.mkIf (
+      config.services.clubcotton.hermes.forgejoIssueWebhook.enable
+      || config.services.clubcotton.hermes.forgejoCiFailureWebhook.enable
+    ) {
+      file = ./forgejo-hermes-webhook-secret.age;
+      owner = "larry";
+      group = "users";
+    };
+
+  age.secrets."honcho-database" = lib.mkIf config.services.clubcotton.postgresql.honcho.enable {
+    file = ./honcho-database.age;
+    owner = "postgres";
+    group = "postgres";
+  };
+
+  age.secrets."honcho-database-raw" = lib.mkIf config.services.clubcotton.honcho.enable {
+    file = ./honcho-database-raw.age;
+    owner = "honcho";
+    group = "honcho";
   };
 
   age.secrets."immich-database" = lib.mkIf config.services.clubcotton.postgresql.enable {
@@ -224,6 +263,11 @@ in {
     group = "users";
   };
 
+  # SearXNG secret key (format: SEARXNG_SECRET=<hex-key>)
+  age.secrets."searxng" = lib.mkIf config.services.clubcotton.searxng.enable {
+    file = ./searxng.age;
+  };
+
   age.secrets."wallabag" = lib.mkIf config.services.clubcotton.wallabag.enable {
     file = ./wallabag.age;
     owner = "wallabag";
@@ -246,6 +290,14 @@ in {
     mode = "0400";
   };
 
+  # Tempo S3 credentials (format: TEMPO_S3_ACCESS_KEY_ID=... TEMPO_S3_SECRET_ACCESS_KEY=...)
+  age.secrets."tempo-s3" = lib.mkIf config.services.clubcotton.tempo.enable {
+    file = ./tempo-s3.age;
+    owner = "tempo";
+    group = "tempo";
+    mode = "0400";
+  };
+
   age.secrets."syncoid-ssh-key" = lib.mkIf (config.services.clubcotton.syncoid.enable || config.services.clubcotton.borgmatic.enable || config.services.clubcotton.restic.enable) {
     file = ./syncoid-ssh-key.age;
     owner =
@@ -263,6 +315,15 @@ in {
     file = ./borg-passphrase.age;
     owner = "root";
     group = "root";
+  };
+
+  # Redis password
+  # To enable: 1) agenix -e redis-password.age  2) uncomment below  3) uncomment requirePassFile in nas-01
+  age.secrets."redis-password" = lib.mkIf config.services.clubcotton.redis.enable {
+    file = ./redis-password.age;
+    owner = "redis-clubcotton";
+    group = "redis-clubcotton";
+    mode = "0400";
   };
 
   # Restic backup secrets
@@ -325,7 +386,7 @@ in {
   };
 
   # Nix builder SSH keys
-  age.secrets."nix-builder-ssh-key" = lib.mkIf (config.services.nix-builder.coordinator.enable or false) {
+  age.secrets."nix-builder-ssh-key" = lib.mkIf ((config.services.nix-builder.coordinator.enable or false) || (config.services.nix-builder.cache-pusher.enable or false)) {
     file = ./nix-builder-ssh-key.age;
     owner = "root";
     group = "root";
@@ -383,5 +444,12 @@ in {
     file = ./forgejo-token-larry.age;
     owner = "larry";
     group = "users";
+  };
+
+  age.secrets."freshrss-env-larry" = lib.mkIf isBotHost {
+    file = ./freshrss-env-larry.age;
+    owner = "larry";
+    group = "users";
+    mode = "0400";
   };
 }

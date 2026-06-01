@@ -8,3 +8,8 @@ nixos.qcow2
 .aider*
 .DS_Store
 Session.vim
+.env
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

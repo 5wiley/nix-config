@@ -8,6 +8,11 @@
   nixosHosts ? [],
   workmuxPackage,
   crushPackage,
+  worktrunkPackage,
+  qmdPackage,
+  gwsPackage,
+  fjPackage,
+  devenvPackage,
   inputs,
   ...
 }: {
@@ -34,6 +39,7 @@
   in
     [
       inputs.vscode-server.homeModules.default
+      inputs.nix-index-database.homeModules.default
       ./modules/atuin.nix
       ./modules/git.nix
       ./modules/tmux-plugins.nix
@@ -175,12 +181,38 @@
   programs.mise = {
     enable = true;
     enableZshIntegration = true;
+    package = unstablePkgs.mise;
+  };
+
+  programs.codex = {
+    enable = true;
+    package = unstablePkgs.codex;
   };
 
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
+    stdlib = ''
+      : ''${XDG_CACHE_HOME:=$HOME/.cache}
+      declare -A direnv_layout_dirs
+      direnv_layout_dir() {
+        local hash path
+        hash="$(shasum <<< "$PWD" | cut -c-7)"
+        path="''${PWD//[^a-zA-Z0-9]/-}"
+        echo "''${direnv_layout_dirs[$PWD]:=$XDG_CACHE_HOME/direnv/layouts/''${hash}''${path}}"
+      }
+
+      ${builtins.readFile (pkgs.runCommandLocal "devenv-direnvrc" {} ''
+        ${devenvPackage}/bin/devenv direnvrc \
+          | sed 's/_nix_direnv_preflight/_devenv_preflight/g' > $out
+      '')}
+    '';
   };
+
+  # Nix workflow tools from
+  # https://iampavel.dev/blog/best-nixos-tools
+  # nix-index-database supplies a prebuilt index for nix-locate and comma.
+  programs.nix-index-database.comma.enable = true;
 
   programs.fzf = {
     package = unstablePkgs.fzf;
@@ -208,7 +240,7 @@
   };
 
   # Command correction
-  programs.thefuck = {
+  programs.pay-respects = {
     enable = true;
     enableZshIntegration = true;
   };
@@ -223,6 +255,30 @@
     enable = true;
     source = ./oh-my-zsh-custom;
     target = ".oh-my-zsh-custom";
+  };
+
+  # Claude wrapper scripts in ~/.local/bin/
+  # These are actual scripts (not shell functions) so they appear as distinct
+  # processes in `ps`, allowing tmux-resurrect to distinguish and restore them.
+  # The scripts intentionally do NOT use `exec` — they stay as the parent process
+  # so tmux-resurrect captures the script name rather than the node process
+  # (which always sets process.title="claude" regardless of argv[0]).
+  home.file.".local/bin/claude" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+      CLAUDE_CONFIG_DIR=~/.claude ${pkgs.claude-code}/bin/claude "$@" --allow-dangerously-skip-permissions
+    '';
+  };
+
+  home.file.".local/bin/claudep" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      source ~/.config/sensitive/.claude-personal-env
+      CLAUDE_CONFIG_DIR=~/.claude-personal ${pkgs.claude-code}/bin/claude "$@" --allow-dangerously-skip-permissions
+    '';
   };
 
   xdg = {
@@ -271,7 +327,7 @@
     # atuin register -u bcotton -e bob.cotton@gmail.com
     envExtra =
       ''
-        export BAT_PAGER="moar --mousemode=select"
+        export BAT_PAGER="moor --mousemode=select"
         export BAT_STYLE="plain"
         export BAT_THEME="Visual Studio Dark+"
         export DFT_DISPLAY=side-by-side
@@ -361,6 +417,7 @@
       autotest = "watchexec -c clear -o do-nothing --delay-run 100ms --exts go 'pkg=\".\${WATCHEXEC_COMMON_PATH/\$PWD/}/...\"; echo \"running tests for \$pkg\"; go test \"\$pkg\"'";
       claude-fork = "claude --fork-session --continue";
       claudep-fork = "claudep --fork-session --continue";
+      nix-options = "xdg-open https://search.nixos.org/options";
       gdn = "git diff | gitnav";
       lg = "lazygit";
       lgs = "lazygit status";
@@ -380,6 +437,9 @@
       ltr = "ll -snew";
       watch = "viddy ";
 
+      # Networking
+      ports = "sudo ss -tunlp";
+
       # Kubernetes
       k = "kubectl";
       kctx = "kubectx";
@@ -391,13 +451,18 @@
       source ${pkgs.zsh-defer}/share/zsh-defer/zsh-defer.plugin.zsh
 
       # Defer heavy initializations until after prompt displays
-      zsh-defer -c 'eval "$(atuin init zsh --disable-up-arrow)"'
+      zsh-defer -c '[[ -r ${
+        if pkgs.stdenv.isDarwin
+        then config.programs.atuin-config.darwinKeyPath
+        else config.programs.atuin-config.nixosKeyPath
+      } ]] && eval "$(atuin init zsh --disable-up-arrow)"'
 
       if [[ "$CLAUDECODE" != "1" ]]; then
         zsh-defer -c 'eval "$(zoxide init zsh)"; alias cd="z"'
       fi
 
       zsh-defer -c 'eval "$(sesh completion zsh)"'
+      zsh-defer -c 'eval "$(wt config shell init zsh)"'
       zsh-defer -c 'eval "$($HOME/.local/bin/bd completion zsh)"; _bd_setup_completion'
 
       bindkey -e
@@ -414,7 +479,9 @@
         function refresh {
           export $(tmux show-environment | grep "^SSH_AUTH_SOCK") > /dev/null
           export $(tmux show-environment | grep "^DISPLAY") > /dev/null
-          export $(tmux show-environment | grep "^KUBECONFIG") > /dev/null
+          if [[ "$KUBECONFIG_LOCAL" != "1" ]]; then
+            export $(tmux show-environment | grep "^KUBECONFIG") > /dev/null
+          fi
           export $(tmux show-environment | grep "^REMOTE_BROWSER_PORT") > /dev/null
         }
       else
@@ -579,7 +646,10 @@
   programs.eza.enable = true;
 
   #  programs.neovim.enable = true;
-  programs.nix-index.enable = true;
+  programs.nix-index = {
+    enable = true;
+    enableZshIntegration = true;
+  };
   programs.zoxide = {
     enable = true;
     enableZshIntegration = false; # Using zsh-defer for deferred init in initContent
@@ -587,14 +657,18 @@
 
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = false;
+    matchBlocks."*" = {
+      extraOptions = {
+        StrictHostKeyChecking = "no";
+        AddKeysToAgent = "yes";
+      };
+      forwardAgent = true;
+    };
     extraConfig = let
       # Generate host list from nixosHosts for RemoteForward configuration
       remoteForwardHosts = lib.concatStringsSep " " nixosHosts;
     in ''
-      Host nas-01 nix-02 nix-03
-        IdentityFile ~/.ssh/nix-builder-id_ed25519
-        IdentitiesOnly no
-
       # Remote browser opening - forward port 7890 from remote Linux hosts
       # to localhost:7890 where browser-opener listens (macOS only)
       # Remote clipboard - forward port 7891 for clipboard-receiver
@@ -603,11 +677,6 @@
         RemoteForward 7890 localhost:7890
         RemoteForward 7891 localhost:7891
         RemoteForward 7892 localhost:7892
-
-      Host *
-        StrictHostKeyChecking no
-        ForwardAgent yes
-
 
       Host github.com
         Hostname ssh.github.com
@@ -625,9 +694,8 @@
       bitwarden-cli
       bottom
       claude-code
-      devenv
+      devenvPackage
       docker-compose
-      forgejo-cli
       fx
       google-cloud-sdk
       kubernetes-helm
@@ -635,15 +703,54 @@
       kubectl
       opentofu
 
-      inputs.opencode.packages.${pkgs.system}.default
-      inputs.beads.packages.${pkgs.system}.default
+      # Build beads locally with Go 1.26 - nixpkgs Go 1.25.5 is too old for dolthub/driver
+      (let
+        buildGoModule126 = unstablePkgs.buildGoModule.override {go = unstablePkgs.go_1_26;};
+        bdBase = buildGoModule126 {
+          pname = "beads";
+          version = "0.61.0";
+          src = inputs.beads;
+          subPackages = ["cmd/bd"];
+          vendorHash = "sha256-wcFAvGoDR9IYckWRMqPqCgPSUKmoYYyYg0dfNGDI6Go=";
+          nativeBuildInputs = [pkgs.git pkgs.pkg-config];
+          buildInputs = [pkgs.icu];
+          doCheck = false;
+          postPatch = ''
+            goVersion=$(go version | ${pkgs.gnugrep}/bin/grep -oP 'go\K[0-9]+\.[0-9]+(\.[0-9]+)?')
+            ${pkgs.gnused}/bin/sed -i "s/^go .*/go $goVersion/" go.mod
+          '';
+        };
+      in
+        pkgs.stdenv.mkDerivation {
+          pname = "beads";
+          version = bdBase.version;
+          phases = ["installPhase"];
+          installPhase = ''
+            mkdir -p $out/bin
+            cp ${bdBase}/bin/bd $out/bin/bd
+            ln -s bd $out/bin/beads
+            mkdir -p $out/share/fish/vendor_completions.d
+            mkdir -p $out/share/bash-completion/completions
+            mkdir -p $out/share/zsh/site-functions
+            $out/bin/bd completion fish > $out/share/fish/vendor_completions.d/bd.fish
+            $out/bin/bd completion bash > $out/share/bash-completion/completions/bd
+            $out/bin/bd completion zsh > $out/share/zsh/site-functions/_bd
+          '';
+        })
       crushPackage
-
+      worktrunkPackage
+      gwsPackage
+      fjPackage
+      bws
+    ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      qmdPackage
+    ]
+    ++ [
       procs
       unstablePkgs.sesh
       unstablePkgs.uv
       tldr
-      unstablePkgs.zed-editor
       zsh-defer # Step 4: Needed for deferred initialization
 
       # Migrated from Homebrew brews
@@ -655,12 +762,19 @@
       jsonnet-bundler
 
       # Development tools
-      azure-cli
+      (azure-cli.withExtensions [azure-cli.extensions.account])
+      devbox
       golangci-lint
+      bun
       nodejs_24
+      nh
+      nix-init
+      nurl
       shellcheck
+      smfh
+      statix
       tea
-      yarn
+      yarn-berry
       terraform
       trufflehog
       # zizmor  # not in nixpkgs yet
@@ -691,9 +805,11 @@
     ++ lib.optionals stdenv.isDarwin [
       # macOS-only: tmux clipboard integration
       reattach-to-user-namespace
+      localPackages.mole
     ]
-    ++ lib.optionals stdenv.isLinux [
+    ++ [
       localPackages.playwright-cli
+      localPackages.weave
     ]
     ++ [
       # Additional tools
