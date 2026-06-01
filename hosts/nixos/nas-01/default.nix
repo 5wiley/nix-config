@@ -392,19 +392,6 @@ in {
     freshrss = {
       enable = true;
       passwordFile = config.age.secrets."freshrss-database".path;
-      extensions = [
-        (pkgs.freshrss-extensions.buildFreshRssExtension {
-          FreshRssExtUniqueId = "Youlag";
-          pname = "youlag";
-          version = "4.4.2";
-          src = pkgs.fetchFromGitHub {
-            owner = "civilblur";
-            repo = "youlag";
-            rev = "4410711ef353d87a82c94da9c23149c79ffc1560";
-            hash = "sha256-ngNQgwFBqJAzDxneJyrWehZpBn9S5ovo0ebugBz0wac=";
-          };
-        })
-      ];
     };
     paperless = {
       enable = true;
@@ -428,7 +415,20 @@ in {
     port = 8104;
     passwordFile = config.age.secrets."freshrss".path;
     authType = "form";
-    extensions = with pkgs.freshrss-extensions; [youtube];
+    extensions = [
+      pkgs.freshrss-extensions.youtube
+      (pkgs.freshrss-extensions.buildFreshRssExtension {
+        FreshRssExtUniqueId = "Youlag";
+        pname = "youlag";
+        version = "4.4.2";
+        src = pkgs.fetchFromGitHub {
+          owner = "civilblur";
+          repo = "youlag";
+          rev = "3456dbf082e6628dd53c51df71b86d9a0d8f0701";
+          hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        };
+      })
+    ];
     tailnetHostname = "freshrss";
   };
 
