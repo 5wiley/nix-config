@@ -20,6 +20,7 @@
         pg-scram-hash = pkgs.callPackage ../pkgs/pg-scram-hash {};
         # hermes-webhook-tools: Configure Hermes webhook routes and proxy Forgejo webhooks
         hermes-webhook-tools = pkgs.callPackage ../pkgs/hermes-webhook-tools {};
+        freshrss-youlag = pkgs.callPackage ../pkgs/freshrss-youlag { freshrss = pkgs.freshrss; };
       }
       # Darwin-only packages
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -52,7 +53,7 @@
     # This allows accessing packages via self.legacyPackages.${system}.localPackages
     legacyPackages.localPackages =
       {
-        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash hermes-webhook-tools;
+        inherit (config.packages) primp gwtmux playwright-cli weave pg-scram-hash hermes-webhook-tools freshrss-youlag;
       }
       // lib.optionalAttrs pkgs.stdenv.isDarwin {
         inherit (config.packages) browser-opener clipboard-receiver notification-receiver arc-tab-archiver mole;

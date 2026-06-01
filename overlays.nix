@@ -59,7 +59,6 @@
         ((import ./overlays/tmux-fingers.nix {inherit config pkgs lib unstablePkgs;}) final prev)
         # Dolt version-controlled database pinned to v1.84.0
         ((import ./overlays/dolt.nix {inherit config pkgs lib unstablePkgs;}) final prev)
-        ((import ./overlays/freshrss-youlag.nix {inherit pkgs lib;}) final prev)
 
         # Beets is only available on Linux due to gst-python build issues on Darwin
         (lib.optionalAttrs prev.stdenv.isLinux
