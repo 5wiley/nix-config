@@ -391,6 +391,12 @@ in {
         ExecStart = upgradeScript;
         TimeoutStartSec = cfg.timeoutSec;
 
+        # Large nixpkgs bumps can fan out into many parallel /nix/store opens
+        # while this unit's nix build copies paths. Keep the service limit high
+        # enough that heavy rebuilds do not fail with EMFILE before nix-daemon
+        # limits become relevant.
+        LimitNOFILE = 65536;
+
         # Logging
         StandardOutput = "journal+console";
         StandardError = "journal+console";
