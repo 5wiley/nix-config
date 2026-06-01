@@ -415,7 +415,20 @@ in {
     port = 8104;
     passwordFile = config.age.secrets."freshrss".path;
     authType = "form";
-    extensions = with pkgs.freshrss-extensions; [youtube];
+    extensions = [
+      pkgs.freshrss-extensions.youtube
+      (pkgs.freshrss-extensions.buildFreshRssExtension {
+        FreshRssExtUniqueId = "Youlag";
+        pname = "youlag";
+        version = "4.4.2";
+        src = pkgs.fetchFromGitHub {
+          owner = "civilblur";
+          repo = "youlag";
+          rev = "3456dbfd252bb23b19e377aa7b3d5e626bbf7b81";
+          hash = "sha256-ET5KgLONRScdZDZQUESynxXIZHjU8f9hx8OqiKHGGaU=";
+        };
+      })
+    ];
     tailnetHostname = "freshrss";
   };
 
