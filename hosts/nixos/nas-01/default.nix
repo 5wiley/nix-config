@@ -415,7 +415,7 @@ in {
     port = 8104;
     passwordFile = config.age.secrets."freshrss".path;
     authType = "form";
-    extensions = with pkgs.freshrss-extensions; [youtube];
+    extensions = with pkgs.freshrss-extensions; [youtube youlag];
     tailnetHostname = "freshrss";
   };
 
