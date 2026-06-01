@@ -415,7 +415,7 @@ groups:
 
   - alert: BleSensorOffline
     expr: homeassistant_sensor_unit_seconds{domain="sensor",entity="sensor.main_ble_sensor_age",instance="homeassistant:8123"} > 5000
-    for: 5m
+    for: 30m
     labels:
       severity: critical
     annotations:
