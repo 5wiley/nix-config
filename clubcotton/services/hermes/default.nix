@@ -445,7 +445,11 @@ in {
       wants = ["network-online.target"];
       wantedBy = ["multi-user.target"];
 
-      path = [pkgs.bash pkgs.coreutils];
+      # `hermes dashboard` may need to rebuild the bundled web UI when the
+      # editable Hermes checkout has newer frontend sources than web_dist.
+      # Keep npm/node in the service PATH so systemd restarts do not fail in a
+      # tight loop with "Web UI frontend not built and npm is not available".
+      path = [pkgs.bash pkgs.coreutils pkgs.nodejs];
 
       environment = {
         HOME = cfg.home;
