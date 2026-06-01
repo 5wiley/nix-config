@@ -24,7 +24,7 @@ test.describe('Open WebUI smoke tests', () => {
 
   test('user profile menu is available', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Open User Profile Menu' })).toBeVisible();
+    await expect(page.getByAltText('Open User Profile Menu')).toBeVisible();
   });
 
   test('search is available', async ({ page }) => {
