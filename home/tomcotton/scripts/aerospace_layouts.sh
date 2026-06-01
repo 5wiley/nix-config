@@ -17,8 +17,8 @@ if [ "$view" == "desktop" ]; then
         sleep 0.5
 
         ws=6
-        OpenAndMove "mail" $ws
         OpenAndMove "messages" $ws
+        OpenAndMove "whatsapp" $ws
         aerospace workspace $ws
         aerospace layout h_tiles
 
