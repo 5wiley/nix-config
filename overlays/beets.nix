@@ -26,7 +26,7 @@
         requests-mock
       ];
     })
-    .overridePythonAttrs {
+    .overridePythonAttrs (oldAttrs: {
       src = pkgs.fetchFromGitHub {
         owner = "bcotton";
         repo = "beets";
@@ -39,7 +39,21 @@
       '';
       # Custom fork has different plugin list than upstream; skip plugin list check
       doCheck = false;
-    };
+      # The custom fork currently sits behind upstream's CVE-2026-42052 fix.
+      # Escape Underscore.js template output tags in the web UI before clearing
+      # nixpkgs' inherited known-vulnerability marker.
+      postPatch =
+        (oldAttrs.postPatch or "")
+        + ''
+          substituteInPlace beetsplug/web/templates/index.html \
+            --replace-fail '<%=' '<%-'
+        '';
+      meta =
+        oldAttrs.meta
+        // {
+          knownVulnerabilities = [];
+        };
+    });
 in {
   # Override beets at the top level to use the custom version
   beets = super.python3.pkgs.toPythonApplication customPythonBeets;
