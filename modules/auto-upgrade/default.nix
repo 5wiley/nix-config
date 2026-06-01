@@ -368,7 +368,9 @@ in {
 
     timeoutSec = mkOption {
       type = types.str;
-      default = "60min";
+      # Large nixpkgs bumps can legitimately take multiple hours on slower
+      # hosts when substitutes are not yet available for the whole closure.
+      default = "6h";
       example = "120min";
       description = "Systemd TimeoutStartSec for the upgrade service. Increase for hosts with long build times.";
     };
