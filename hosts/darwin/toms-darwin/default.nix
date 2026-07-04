@@ -109,6 +109,7 @@ in {
         "cabal-install"
       ];
       casks = [
+        "audacity"
         "claude-code"
         "hiddenbar"
         "plugdata"
