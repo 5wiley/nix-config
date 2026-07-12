@@ -107,6 +107,8 @@ in {
         "docker-compose"
         "ghcup"
         "cabal-install"
+        "mole"
+        "nb"
       ];
       casks = [
         "audacity"
@@ -149,7 +151,7 @@ in {
         # "xcodes-app" # Manages downloads enabling of xcode versions
         "cryptomator" # encrypts files, used to back up bitwarden
         "zen" # zen browser
-        "nikitabobko/tap/aerospace"
+        "aerospace"
       ];
       masApps = {
         # "Xcode" = 497799835;

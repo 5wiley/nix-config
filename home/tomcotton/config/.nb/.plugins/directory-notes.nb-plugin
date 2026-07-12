@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+###############################################################################
+# directory-notes.nb-plugin
+#
+# Create or edit a note for the current directory.
+#
+# A plugin for `nb`.
+#   https://github.com/xwmx/nb
+###############################################################################
+
+# Add the new subcommand name with `_subcommands add <name>`.
+_subcommands add "dir"
+
+# Define help and usage text with `_subcommands describe <subcommand> <usage>`.
+_subcommands describe "dir" <<HEREDOC
+Usage:
+  nb dir [<content>]
+
+Description:
+  If there is no note for the current directory, create one.
+  If there is an existing note, open it in the editor.
+  If a content argument is provided (including an empty string), append it to the note instead of opening the editor.
+HEREDOC
+
+# Define the subcommand as a function, named with a leading underscore.
+_dir() {
+  local abs_path="$PWD"
+  local dir parent_dir parent_dir_path note_name
+
+  if [ "$abs_path" = "/" ]; then
+    dir="root"
+    parent_dir="root"
+  else
+    dir=$(basename "$abs_path")
+    parent_dir_path=$(dirname "$abs_path")
+    if [ "$parent_dir_path" = "/" ]; then
+      parent_dir="root"
+    else
+      parent_dir=$(basename "$parent_dir_path")
+    fi
+  fi
+
+  local ext="${NB_DEFAULT_EXTENSION:-md}"
+  note_name="Directories/[${parent_dir}] ${dir}.${ext}"
+
+  # Search for notes tagged with the path (which returns substring matches too)
+  local search_results
+  search_results=$(nb search -t "$abs_path" --list --no-color 2>/dev/null || true)
+
+  local note_id=""
+  if [ -n "$search_results" ]; then
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      
+      # Extract the tag string (everything inside the quotes after the middle dot)
+      local tags_str
+      tags_str=$(echo "$line" | sed -E 's/.*· "([^"]+)".*/\1/')
+      
+      # Split tags by space and look for an exact match of "#$abs_path"
+      for tag in $tags_str; do
+        if [ "$tag" = "#${abs_path}" ]; then
+          note_id=$(echo "$line" | sed -E 's/^\[([^]]+)\].*/\1/')
+          break 2
+        fi
+      done
+    done <<< "$search_results"
+  fi
+
+  if [ "${#_ARGUMENTS[@]}" -gt 0 ]; then
+    # We received an argument (could be an empty string)
+    if [ -n "$note_id" ]; then
+      printf "\n%s" "${_ARGUMENTS[0]:-}" | nb edit "$note_id"
+    else
+      printf "%s" "${_ARGUMENTS[0]:-}" | nb add "${note_name}" --tags "${abs_path}"
+    fi
+  else
+    # No arguments
+    if [ -n "$note_id" ]; then
+      nb edit "$note_id"
+    else
+      nb add "${note_name}" --tags "${abs_path}"
+    fi
+  fi
+}

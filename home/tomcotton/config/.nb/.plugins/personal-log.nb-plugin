@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+###############################################################################
+# personal-log.nb-plugin
+#
+# A personal log plugin for `nb`.
+#
+# Prepends content with a timestamp to log.md.
+#
+# Install with placing it in the .plugins directory.
+#
+# https://github.com/xwmx/nb
+###############################################################################
+
+# Add the new subcommand name with `_subcommands add <name>`.
+_subcommands add "log"
+
+# Define help and usage text with `_subcommands describe <subcommand> <usage>`.
+_subcommands describe "log" <<HEREDOC
+Usage:
+  nb log [<options>] [<content>]
+
+Options:
+  -d, --dir            Automatically add the top level directory name as a tag after the date.
+  -t, --tags <tags>    Add custom tags after the date (comma-separated list).
+
+Description:
+  If content is provided, prepend a timestamped log entry to log.md.
+  If no content is provided, open log.md in the editor.
+HEREDOC
+
+# Define the subcommand as a function, named with a leading underscore.
+_log() {
+  local filename="log.md"
+  
+  # Ensure the note exists in the current notebook.
+  # If it doesn't exist, create it.
+  if ! nb show "$filename" --path &>/dev/null; then
+    echo "" | nb add "$filename" >/dev/null
+  fi
+
+  local add_dir_tag=false
+  local custom_tags_raw=""
+  local content_args=()
+  
+  local i=0
+  while [ $i -lt "${#_ARGUMENTS[@]}" ]; do
+    local arg="${_ARGUMENTS[$i]}"
+    case "$arg" in
+      -d|--dir)
+        add_dir_tag=true
+        ;;
+      -t|--tags)
+        i=$((i + 1))
+        custom_tags_raw="${_ARGUMENTS[$i]:-}"
+        ;;
+      *)
+        content_args+=("$arg")
+        ;;
+    esac
+    i=$((i + 1))
+  done
+
+  if [ "${#content_args[@]}" -gt 0 ]; then
+    # We received content arguments. Prepend them to the log note.
+    # Join the arguments by space to support both quoted and unquoted inputs.
+    local content
+    local old_ifs="$IFS"
+    IFS=" "
+    content="${content_args[*]}"
+    IFS="$old_ifs"
+
+    local timestamp
+    timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+
+    local human_date
+    human_date=$(date "+%B, %A %e" | tr -s ' ')
+
+    local formatted_tags=""
+    if [ -n "$custom_tags_raw" ]; then
+      local old_ifs_tags="$IFS"
+      IFS=","
+      for tag in $custom_tags_raw; do
+        tag=$(echo "$tag" | xargs)
+        if [ -n "$tag" ]; then
+          if [[ ! "$tag" =~ ^# ]]; then
+            tag="#${tag}"
+          fi
+          formatted_tags="${formatted_tags} ${tag}"
+        fi
+      done
+      IFS="$old_ifs_tags"
+    fi
+
+    local dir_tag=""
+    if [ "$add_dir_tag" = "true" ]; then
+      local dir_name
+      dir_name=$(basename "$PWD")
+      dir_tag=" #${dir_name}"
+    fi
+
+    local combined_tags="${formatted_tags}${dir_tag}"
+
+    # Format the log entry: [date] Human Date: #tags \n content
+    # Prepend to the file using nb edit's --prepend flag
+    printf "[%s] %s:%s\n%s\n\n" "$timestamp" "$human_date" "$combined_tags" "$content" | nb edit "$filename" --prepend >/dev/null
+  else
+    # No content arguments. Open the log note in the editor.
+    nb edit "$filename"
+  fi
+}
