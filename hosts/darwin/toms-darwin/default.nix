@@ -151,8 +151,11 @@ in {
         # "xcodes-app" # Manages downloads enabling of xcode versions
         "cryptomator" # encrypts files, used to back up bitwarden
         "zen" # zen browser
-        "aerospace"
       ];
+      extraConfig = ''
+        tap "nikitabobko/tap", trusted: true
+        cask "aerospace"
+      '';
       masApps = {
         # "Xcode" = 497799835;
         #   "Amphetamine" = 937984704;
