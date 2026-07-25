@@ -4,6 +4,7 @@
   lib,
   unstablePkgs,
   devenvPackage,
+  inputs,
   ...
 }: let
   # See https://haseebmajid.dev/posts/2023-07-10-setting-up-tmux-with-nix-home-manager/
@@ -66,10 +67,6 @@
         sha256 = "sha256-w0bKtbxrRZFxs2hekljI27IFzM1pe1HvAg31Z9ccs0U=";
       };
     };
-  nixVsCodeServer = fetchTarball {
-    url = "https://github.com/msteen/nixos-vscode-server/tarball/master";
-    sha256 = "sha256:0xjal4zcbmdjdaspfkjbpx1680q7390wfzmj7iad04kp3pc9syf8";
-  };
 
   rose-pine-hyprcursor = pkgs.fetchFromGitHub {
     owner = "ndom91";
@@ -81,7 +78,7 @@ in {
   home.stateVersion = "25.05";
 
   imports = [
-    "${nixVsCodeServer}/modules/vscode-server/home.nix"
+    inputs.vscode-server.homeModules.default
     ./modules/atuin.nix
     ./tomcotton/modules/tmux-config.nix
     ./tomcotton/modules/lf-dropdown.nix

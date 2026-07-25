@@ -4,7 +4,7 @@
   ...
 }: {
   flake = let
-    inherit (inputs) nixpkgs nixpkgs-unstable home-manager agenix nix-darwin disko disko-zfs tsnsrv vscode-server nixos-generators nix-builder-config musnix;
+    inherit (inputs) nixpkgs nixpkgs-unstable home-manager agenix nix-darwin disko disko-zfs tsnsrv vscode-server nixos-generators nix-builder-config musnix nixos-hardware;
     inherit (nixpkgs) lib;
 
     # Package set generators
@@ -120,6 +120,7 @@
       linuxBuilderEnable = false;
       desktopPackages = false;
       determinateNix = false;
+      isT2Mac = false;
     };
 
     # NixOS host specifications - single source of truth for all NixOS hosts
@@ -263,6 +264,7 @@
           system = "x86_64-linux";
           usernames = ["tomcotton"];
           shouldScrapeMetrics = false;
+          isT2Mac = true;
           # No IP - laptop with DHCP, not on homepage
         };
         incus-testing = {
@@ -411,7 +413,14 @@
           {services.nix-builder.client.enable = true;}
           ../hosts/nixos/${hostName}
           (mkHomeManagerConfig unstablePkgs system hostName usernames)
-        ];
+        ]
+        ++ (lib.optionals hostSpec.isT2Mac [
+          inputs.nixos-hardware.nixosModules.apple-t2
+          {
+            nix.settings.extra-substituters = ["https://cache.soopy.moe"];
+            nix.settings.extra-trusted-public-keys = ["cache.soopy.moe-1:0RZVsQeR+GOh0VQI9rvnHz55nVXkFardDqfm4+afjPo="];
+          }
+        ]);
 
       # Additional modules for full (non-minimal) systems
       fullModules =

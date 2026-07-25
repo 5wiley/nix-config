@@ -28,7 +28,7 @@
   # === Audio Friendly Kernel Mods ===
   musnix.enable = true;
   users.users.tomcotton.extraGroups = ["audio"];
-  boot.kernelPackages = pkgs.linuxPackages-rt_latest;
+  boot.kernelPackages = lib.mkDefault pkgs.linuxPackages-rt_latest;
 
   # services.kmonad = {
   #   enable = true;
@@ -72,6 +72,7 @@
     "broadcom-sta-6.30.223.271-57-5.15.183-rt85"
     "broadcom-sta-6.30.223.271-57-6.6.87-rt54"
     "broadcom-sta-6.30.223.271-59-6.6.112-rt63"
+    "broadcom-sta-6.30.223.271-59-6.18.33"
   ];
 
   networking = {

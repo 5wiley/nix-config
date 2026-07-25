@@ -1,10 +1,21 @@
 {
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.soopy.moe"
+    ];
+    extra-trusted-public-keys = [
+      "cache.soopy.moe-1:0RZVsQeR+GOh0VQI9rvnHz55nVXkFardDqfm4+afjPo="
+    ];
+  };
+
   inputs = {
     agenix.url = "github:ryantm/agenix";
     nixinate.url = "github:matthewcroughan/nixinate";
 
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
+    nixos-hardware.url = "github:NixOS/nixos-hardware";
 
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
