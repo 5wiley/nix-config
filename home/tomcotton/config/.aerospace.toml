@@ -103,21 +103,21 @@ automatically-unhide-macos-hidden-apps = false
     # ctrl-alt-rightSquareBracket = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
-    ctrl-alt-h = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace left'
-    ctrl-alt-j = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace down'
-    ctrl-alt-k = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace up'
-    ctrl-alt-l = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace right'
+    ctrl-alt-left = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace left'
+    ctrl-alt-down = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace down'
+    ctrl-alt-up = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace up'
+    ctrl-alt-right = 'focus --boundaries workspace --boundaries-action wrap-around-the-workspace right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move
-    ctrl-alt-shift-h = 'move left'
-    ctrl-alt-shift-j = 'move down'
-    ctrl-alt-shift-k = 'move up'
-    ctrl-alt-shift-l = 'move right'
+    ctrl-alt-shift-left  = 'move left'
+    ctrl-alt-shift-down  = 'move down'
+    ctrl-alt-shift-up    = 'move up'
+    ctrl-alt-shift-right = 'move right'
 
-    ctrl-alt-cmd-h = 'join-with left'
-    ctrl-alt-cmd-j = 'join-with down'
-    ctrl-alt-cmd-k = 'join-with up'
-    ctrl-alt-cmd-l = 'join-with right'
+    ctrl-alt-cmd-left  = 'join-with left'
+    ctrl-alt-cmd-down  = 'join-with down'
+    ctrl-alt-cmd-up    = 'join-with up'
+    ctrl-alt-cmd-right = 'join-with right'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#resize
     ctrl-alt-minus = 'resize smart -50'

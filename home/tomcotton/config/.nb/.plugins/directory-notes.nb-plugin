@@ -2,7 +2,7 @@
 ###############################################################################
 # directory-notes.nb-plugin
 #
-# Create or edit a note for the current directory.
+# Create or edit a log note for the current directory.
 #
 # A plugin for `nb`.
 #   https://github.com/xwmx/nb
@@ -21,8 +21,8 @@ Options:
   -t, --tags <tags>    Add custom tags after the date (comma-separated list).
 
 Description:
-  If content is provided, prepend a timestamped log entry to the directory note.
-  If no content is provided, open the directory note in the editor.
+  If content is provided, prepend a timestamped log entry to the directory's dir note.
+  If no content is provided, open the directory's dir note in the editor.
 HEREDOC
 
 # Define the subcommand as a function, named with a leading underscore.
@@ -46,33 +46,15 @@ _dir() {
   local ext="${NB_DEFAULT_EXTENSION:-md}"
   note_name="Directories/[${parent_dir}] ${dir}.${ext}"
 
-  # Search for notes tagged with the path
+  # Search for note tagged with the path (which returns absolute path directly)
   local note_path=""
-  find_note_path() {
-    local paths
-    paths=$(nb search -t "$abs_path" --path 2>/dev/null || true)
-    if [ -n "$paths" ]; then
-      while IFS= read -r p; do
-        [ -z "$p" ] && continue
-        if [ -f "$p" ] && grep -q -F "#${abs_path}" "$p"; then
-          note_path="$p"
-          return 0
-        fi
-      done <<< "$paths"
-    fi
-    return 1
-  }
-
-  find_note_path || true
+  note_path=$(nb search -t "$abs_path" --path 2>/dev/null | head -n 1)
 
   # Ensure the note exists in the current notebook.
   # If it doesn't exist, create it.
   if [ -z "$note_path" ]; then
-    echo "" | nb add "${note_name}" --tags "${abs_path}" >/dev/null
-    find_note_path || true
-    if [ -z "$note_path" ]; then
-      note_path="${NB_NOTEBOOK_PATH}/${note_name}"
-    fi
+    nb add "${note_name}" --tags "${abs_path}" >/dev/null
+    note_path=$(nb show "${note_name}" --path 2>/dev/null)
   fi
 
   local add_dir_tag=false
@@ -131,7 +113,7 @@ _dir() {
     local dir_tag=""
     if [ "$add_dir_tag" = "true" ]; then
       local dir_name
-      dir_name=$(basename "$PWD")
+      dir_name=$(basename "$abs_path")
       dir_tag=" #${dir_name}"
     fi
 
